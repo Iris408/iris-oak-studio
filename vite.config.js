@@ -10,6 +10,8 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         // Standalone sample: Website Care Report (fictional client)
         careReport: resolve(__dirname, 'care-report.html'),
+        // Standalone sample: Client Portal dashboard (fictional client)
+        clientPortal: resolve(__dirname, 'client-portal.html'),
       },
     },
   },
