@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { CLIENT, STATUS_SUMMARY, SITE_HEALTH, RECENT_ACTIVITY, UPCOMING_WORK, TIMELINE, MESSAGES } from './portalData';
 
-// Each status pairs a colour with an icon shape and a text label, so it never relies on colour alone.
 const STATUS = {
   complete: {
     label: 'Complete',

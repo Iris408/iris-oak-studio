@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   CheckCircle2,
   AlertTriangle,
@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { REPORT, MAINTENANCE_CHECKS, WORK_COMPLETED, RECOMMENDATIONS } from './reportData';
 
-// Each status pairs a colour with an icon shape and a text label, so it never relies on colour alone.
 const STATUS = {
   complete: {
     label: 'Complete',

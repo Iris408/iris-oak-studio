@@ -12,6 +12,8 @@ export default defineConfig({
         careReport: resolve(__dirname, 'care-report.html'),
         // Standalone sample: Client Portal dashboard (fictional client)
         clientPortal: resolve(__dirname, 'client-portal.html'),
+        // Privacy Policy, served at /privacy (see vercel.json cleanUrls)
+        privacy: resolve(__dirname, 'privacy.html'),
       },
     },
   },

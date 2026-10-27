@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Sliders, 
-  Sun, 
-  Moon, 
-  Sparkles, 
   ArrowUpRight, 
   CheckCircle2, 
   ShieldCheck, 
@@ -14,17 +11,11 @@ import {
   Server, 
   ChevronRight, 
   X, 
-  Send, 
-  Copy, 
   Check, 
   Maximize2, 
-  RefreshCw, 
-  HelpCircle,
   Clock,
-  Briefcase,
-  Terminal,
   Activity,
-  DollarSign
+  ChevronDown
 } from 'lucide-react';
 
 // --- PALETTES & THEMES ---
@@ -136,55 +127,86 @@ const loadSettings = () => {
 
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-// --- INITIAL SAMPLE DATA ---
+const PORTFOLIO_FILTERS = ['All', 'Web Dev', 'Product Builds', 'Systems', 'Care Retainers'];
+
+// Portfolio projects. `category` shows as the left pill (and drives the filters);
+// `status` shows as the right pill.
 const SAMPLE_PROJECTS = [
   {
-    id: 'proj-1',
-    title: 'Aura Health & Performance App',
-    client: 'Aura Systems Inc.',
+    id: 'kawari-company',
+    title: 'Kawari Company',
+    status: '',
     category: 'Web Dev',
-    summary: 'Custom Next.js web portal and high-frequency data analytics dashboard for high-performance athletic training.',
-    tags: ['Next.js', 'TypeScript', 'Tailwind', 'GraphQL', 'Tailwind CSS'],
-    stats: { performance: '99/100', loadTime: '0.4s', conversion: '+34%' },
-    deliverables: ['Custom Web Platform', 'Design System', 'API Gateway Integrations', 'Site Maintenance Plan'],
-    description: 'We built a streamlined, zero-latency dashboard interface designed to visualize heavy telemetry data in real-time. Paired with a headless CMS backend for immediate content updates.',
-    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80'
+    client: '',
+    summary: 'A calm, minimalist first website built for a safeguarding consultancy with more than 25 years of experience: clear, credible and easy to get in touch.',
+    tags: ['Next.js', 'TypeScript', 'CSS', 'React'],
+    stats: {},
+    details: {
+      heading: 'Project scope & deliverables',
+      text: 'A clean, minimalist website that clearly presents the company’s expertise, services and gives prospective clients a simple way to get in touch.'
+    },
+    technicalExecution: 'Designed and built in Webflow, with a responsive layout that adapts to different screen sizes.',
+    image: '/images/kawari-company/homepage.png'
   },
   {
-    id: 'proj-2',
-    title: 'Verve Spatial Architecture Studio',
-    client: 'Verve Atelier',
+    id: 'bloom',
+    title: 'Bloom',
+    status: 'Demo',
+    category: 'Product Builds',
+    client: '',
+    summary: 'A calm visual planner for everyday routines, designed for neurodivergent users, with no streaks, pressure or falling behind.',
+    tags: ['JavaScript', 'Vite', 'FastAPI', 'PostgreSQL', 'Python'],
+    stats: {},
+    details: {
+      heading: 'Features & focus',
+      items: [
+        'Visual task planning for everyday routines',
+        'A calm interface designed for use without streaks or pressure',
+        'Everyday mode available in the current demo'
+      ]
+    },
+    technicalExecution: 'Built with a JavaScript and Vite front end, a FastAPI back end and a PostgreSQL database, and set up as a progressive web app (PWA).',
+    image: '/images/bloom/overview.png'
+  },
+  {
+    id: 'partspilot',
+    title: 'PartsPilot',
+    status: 'Prototype',
+    category: 'Product Builds',
+    client: '',
+    summary: 'Automotive inventory management platform for stock tracking, low-stock alerts and clear reporting for teams, all in one place.',
+    tags: ['React', 'TypeScript', 'FastAPI', 'PostgreSQL', 'Docker'],
+    stats: {},
+    details: {
+      heading: 'Features & focus',
+      items: [
+        'Inventory and stock tracking for automotive teams',
+        'Low-stock alerts',
+        'Category summaries and inventory reporting'
+      ]
+    },
+    technicalExecution: 'Built with a React and TypeScript front end, a FastAPI back end and a PostgreSQL database, with Docker used to containerise the application.',
+    image: '/images/partspilot/dashboard.png'
+  },
+  {
+    id: 'accesshub',
+    title: 'AccessHub',
+    status: 'Prototype',
     category: 'Systems',
-    summary: 'Monochrome minimalist visual identity, dynamic Webflow page build, and headless portfolio gallery.',
-    tags: ['Brand Identity', 'UX Engineering', 'Three.js', 'Webflow'],
-    stats: { performance: '100/100', loadTime: '0.3s', engagement: '+52%' },
-    deliverables: ['Brand Guidelines', 'Component Library', 'WebGL Showcase', 'Continuous Monthly Maintenance'],
-    description: 'A quiet, high-contrast digital space designed to let architectural imagery command full focus. Built with subtle spatial transitions and smooth micro-interactions.',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    id: 'proj-3',
-    title: 'Chronos Continuous Care Platform',
-    client: 'Chronos Digital',
-    category: 'Care Retainers',
-    summary: 'Ongoing site care, security hardening, automated performance tuning, and feature expansion retainer for SaaS client.',
-    tags: ['Site Maintenance', 'CI/CD Pipelines', 'Sentry Monitoring', 'Stripe Billing'],
-    stats: { uptime: '99.99%', issueResolution: '< 2 hrs', securityScore: 'A+' },
-    deliverables: ['Weekly Backups & Audit', 'Feature Sprints', 'Core Web Vitals Guarantee', '24/7 Monitoring'],
-    description: 'An all-inclusive care subscription ensuring the client website maintains peak security, SEO health, and lightning-fast loading speeds week after week.',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    id: 'proj-4',
-    title: 'Kinetix E-Commerce Experience',
-    client: 'Kinetix Labs',
-    category: 'Product Build',
-    summary: 'Headless Shopify ecommerce experience with custom product configurator and frictionless checkout flow.',
-    tags: ['Shopify Plus', 'React', 'Tailwind', 'Sanity CMS'],
-    stats: { revenueGrowth: '+48%', cartAbandonment: '-18%', mobileSpeed: '98/100' },
-    deliverables: ['Headless Frontend', '3D Configurator', 'Custom Checkout', 'Monthly Care Agreement'],
-    description: 'Designed and developed to elevate premium hardware sales with immersive 360-degree product previews and an intuitive checkout path.',
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80'
+    client: '',
+    summary: 'One place to manage people, roles and access requests, so teams always know who can see what. Admins, managers and auditors each get the right level of access.',
+    tags: ['React', 'TypeScript', 'FastAPI', 'PostgreSQL', 'RBAC'],
+    stats: {},
+    details: {
+      heading: 'Features & focus',
+      items: [
+        'User and role management',
+        'Permission assignment',
+        'Access request handling in one place'
+      ]
+    },
+    technicalExecution: 'Built with a React and TypeScript front end, a FastAPI back end and a PostgreSQL database, using role-based access control (RBAC) to manage what each user can see and do.',
+    image: '/images/accesshub/dashboard.png'
   }
 ];
 
@@ -197,11 +219,13 @@ const CARE_PLANS = [
     price: '£149',
     period: 'one-off',
     features: [
-      'Review of up to five key pages',
-      'Check mobile layout, links and forms',
+      '18-point check covering speed, search visibility, usability and accessibility',
+      'Up to five key pages and customer journeys reviewed',
+      'Mobile layout, links and forms tested',
+      'Prioritised findings, ranked by impact',
       'Review visible performance and accessibility issues',
       'Prioritised findings and practical recommendations',
-      'Report normally within five working days'
+      'Report delivered within 5 working days'
     ],
     note: 'If you start an annual care plan within 14 days, the £149 check-up fee is credited toward it.',
     popular: false,
@@ -223,7 +247,7 @@ const CARE_PLANS = [
       'Basic security and uptime checks',
       'Key pages and forms tested after updates',
       'Short monthly care summary',
-      'Email support, reply within two working days'
+      'Email support, reply within 2 working days'
     ],
     note: 'Included tasks are agreed for your site before care begins.',
     popular: false,
@@ -234,16 +258,16 @@ const CARE_PLANS = [
     name: 'Growth',
     category: 'Ongoing website care',
     tagline: 'More hands-on support for sites needing regular attention.',
-    price: '£119',
-    annualPrice: '£1,190',
-    annualMonthlyPrice: '£99.17',
-    annualSaving: '£238',
+    price: '£99',
+    annualPrice: '£990',
+    annualMonthlyPrice: '£82.50',
+    annualSaving: '£198',
     period: 'per month',
     features: [
-      'Everything in Core Care',
+      'Everything in Core Care, plus:',
       'Up to one hour of small, agreed site or content updates each month',
       'Performance checks and reasonable fixes within the included hour',
-      'Priority email support, reply within one working day'
+      'Priority email support, reply within 1 working day'
     ],
     note: 'Larger changes and new features are scoped and quoted separately.',
     popular: true,
@@ -254,16 +278,16 @@ const CARE_PLANS = [
     name: 'Priority',
     category: 'Ongoing website care',
     tagline: 'More time for regular updates and ongoing site improvements.',
-    price: '£229',
-    annualPrice: '£2,290',
-    annualMonthlyPrice: '£190.83',
-    annualSaving: '£458',
+    price: '£139',
+    annualPrice: '£1,390',
+    annualMonthlyPrice: '£115.83',
+    annualSaving: '£278',
     period: 'per month',
     features: [
-      'Everything in Growth Care',
+      'Everything in Growth Care, plus:',
       'Up to three hours of agreed site updates or maintenance work each month',
       'Quarterly review of site needs and recommended next steps',
-      'Priority email support, reply within one working day'
+      'Priority email support, reply within 1 working day'
     ],
     note: 'Larger changes and new features are scoped and quoted separately.',
     popular: false,
@@ -272,15 +296,401 @@ const CARE_PLANS = [
 ];
 
 const TECH_STACK = [
-  { name: 'Next.js 15', role: 'Fullstack Framework', category: 'Engineering' },
-  { name: 'Astro', role: 'Ultra-Fast Static Sites', category: 'Engineering' },
+  { name: 'React', role: 'Interactive User Interfaces', category: 'Engineering' },
+  { name: 'Next.js', role: 'Full-Stack Web Applications', category: 'Engineering' },
+  { name: 'TypeScript', role: 'Typed JavaScript Development', category: 'Engineering' },
+  { name: 'Astro', role: 'Content-Focused Websites', category: 'Engineering' },
   { name: 'Tailwind CSS', role: 'Utility-First Styling', category: 'Design & Code' },
-  { name: 'Framer Motion', role: 'Micro-Interactions & Motion', category: 'Design & Code' },
-  { name: 'Sanity / Dato CMS', role: 'Headless Content Architecture', category: 'CMS' },
-  { name: 'Stripe & Lemonsqueezy', role: 'Payments & Subscriptions', category: 'Infrastructure' },
-  { name: 'Vercel / Cloudflare', role: 'Edge Deployment & CDN', category: 'Infrastructure' },
-  { name: 'Figma', role: 'Systemic UI/UX Design', category: 'Design' }
+  { name: 'Framer Motion', role: 'Interface Animation', category: 'Design & Code' },
+  { name: 'FastAPI', role: 'Python API Development', category: 'Engineering' },
+  { name: 'PostgreSQL', role: 'Relational Data Storage', category: 'Infrastructure' },
+  { name: 'Docker', role: 'Containerised Development', category: 'Infrastructure' },
+  { name: 'Vercel', role: 'Frontend Deployment', category: 'Infrastructure' }
 ];
+
+// --- STUDIO OFFERINGS ---
+// Tabbed categories in the Services section. Site Maintenance links to the existing care plans.
+// One description per service, shared by the Studio Offerings tabs and the enquiry form choices
+const SERVICE_DESCRIPTIONS = {
+  websites: 'A new site, or a fresh start for your existing one.',
+  'booking-integrations': 'Connect your site to the tools you already use.',
+  'business-tools': 'Automations and dashboards that save you time.',
+  'web-apps': 'Built from the ground up for your business, with nothing off the shelf.',
+  'care-plans': 'Updates, checks and support after launch.'
+};
+
+const OFFERING_CATEGORIES = [
+  { id: 'websites', name: 'Websites', positioning: SERVICE_DESCRIPTIONS.websites, Icon: Layout },
+  { id: 'booking-integrations', name: 'Booking & Integrations', positioning: SERVICE_DESCRIPTIONS['booking-integrations'], Icon: Layers },
+  { id: 'business-tools', name: 'Business Tools', positioning: SERVICE_DESCRIPTIONS['business-tools'], Icon: Zap },
+  { id: 'web-apps', name: 'Web Apps', positioning: SERVICE_DESCRIPTIONS['web-apps'], Icon: Server }
+];
+
+const CARE_OFFERING = { id: 'care-plans', name: 'Site Maintenance', positioning: SERVICE_DESCRIPTIONS['care-plans'], Icon: ShieldCheck };
+
+// Header dropdown
+const OFFERINGS_MENU = [
+  { id: 'websites', label: 'Websites' },
+  { id: 'booking-integrations', label: 'Booking & Integrations' },
+  { id: 'business-tools', label: 'Business Tools' },
+  { id: 'web-apps', label: 'Web Apps' },
+  { id: 'care-plans', label: 'Site Maintenance' }
+];
+
+const WEBSITE_PACKAGES = [
+  {
+    id: 'foundation',
+    name: 'Foundation',
+    price: '£395',
+    tagline: 'A polished one-page site to get your business online.',
+    includesLabel: 'What’s included:',
+    features: [
+      'One-page website with up to five sections',
+      'Styled to your logo, colours and fonts',
+      'Contact form, or a link to your existing booking system',
+      'Tested on mobile, tablet and desktop before launch',
+      'Page title, description and social share image set up',
+      'One round of revisions',
+      'Launch support for the first 14 days after going live'
+    ],
+    note: 'Extra sections or pages are quoted separately.',
+    readyIn: 'Ready in about 1–2 weeks',
+    popular: false
+  },
+  {
+    id: 'signature',
+    name: 'Signature',
+    price: '£695',
+    tagline: 'More room to tell your story, with pages planned around your business.',
+    includesLabel: 'Everything in Foundation, plus:',
+    features: [
+      'Up to three pages, e.g. Home, About and Services',
+      'Page content structured around your services and common customer questions',
+      'Contact or enquiry form set up to send to your email',
+      'Google Search Console set-up and page titles for each page',
+      'Google Maps location and social links added',
+      'Two rounds of revisions in total',
+      'Launch support for the first 14 days after going live'
+    ],
+    note: 'Additional pages are quoted separately.',
+    readyIn: 'Ready in about 2 weeks',
+    popular: true
+  },
+  {
+    id: 'bespoke',
+    name: 'Bespoke',
+    price: '£995',
+    tagline: 'A tailored website, designed around your goals.',
+    includesLabel: 'Everything in Signature, plus:',
+    features: [
+      'Up to five pages',
+      'Planning session to map page structure and the customer journey',
+      'Custom visual direction, with a layout designed for each page',
+      'One integration included, e.g. booking, newsletter sign-up or analytics',
+      '30-minute handover walkthrough of your new site',
+      'Three rounds of revisions in total',
+      'Launch support for the first 21 days after going live'
+    ],
+    note: 'Larger integrations and extra features are scoped and quoted separately.',
+    readyIn: 'Ready in about 3–4 weeks',
+    popular: false
+  }
+];
+
+const WEBSITE_FOOTER =
+  'Every website is mobile-friendly, built with accessibility in mind and includes launch support. Pay in full or split into 2, 3 or 4 instalments.';
+
+const BOOKING_PACKAGES = [
+  {
+    id: 'essential-integration',
+    name: 'Essential Integration',
+    prefix: 'from',
+    price: '£250',
+    tagline: 'Connect one tool you already use to your website.',
+    includesLabel: 'What’s included:',
+    features: [
+      'One integration, e.g. a booking widget, newsletter sign-up or analytics',
+      'Styled to match your site’s look and layout',
+      'Tested on mobile, tablet and desktop',
+      'Checked end to end, so bookings or sign-ups arrive where they should',
+      'Handover notes, so you know how it works'
+    ],
+    readyIn: 'Ready in about 1 week',
+    cta: 'Discuss Essential Integration →'
+  },
+  {
+    id: 'smart-forms',
+    name: 'Smart Forms',
+    prefix: 'from',
+    price: '£450',
+    tagline: 'Forms that ask the right questions and send answers where you need them.',
+    includesLabel: 'Everything in Essential Integration, plus:',
+    features: [
+      'A multi-step quote or enquiry form',
+      'Conditional questions that adapt to each answer',
+      'File uploads where needed, e.g. photos or documents',
+      'Responses sent to your email, a spreadsheet, or both',
+      'An automatic confirmation email for your customer'
+    ],
+    readyIn: 'Ready in about 1–2 weeks',
+    cta: 'Discuss Smart Forms →'
+  },
+  {
+    id: 'connected-system',
+    name: 'Connected System',
+    prefix: 'from',
+    price: '£950',
+    tagline: 'Bookings, payments and follow-ups working together.',
+    includesLabel: 'Everything in Smart Forms, plus:',
+    features: [
+      'Booking with online payment or deposits, e.g. via Stripe',
+      'Forms connected to your CRM or business system',
+      'Automated follow-up emails or reminders',
+      'Up to three tools connected as one flow',
+      'A 30-minute handover call by phone or video'
+    ],
+    readyIn: 'Ready in about 2–3 weeks',
+    cta: 'Discuss Connected System →'
+  }
+];
+
+const BOOKING_FOOTER = {
+  groups: [
+    { label: 'Bookings:', tools: 'Calendly · Fresha · SimplyBook · OpenTable' },
+    { label: 'Payments:', tools: 'Stripe · PayPal' },
+    { label: 'Marketing:', tools: 'Mailchimp · Kit · Google Business · Meta Pixel · Analytics' },
+    { label: 'Business systems:', tools: 'HubSpot · Pipedrive · Xero · QuickBooks · Google Workspace' }
+  ],
+  note: 'Using something else? Just ask, as most tools can be connected.'
+};
+
+const BUSINESS_PACKAGES = [
+  {
+    id: 'single-automation',
+    name: 'Single Automation',
+    prefix: 'from',
+    price: '£350',
+    tagline: 'One task, handled automatically.',
+    includesLabel: 'What’s included:',
+    features: [
+      'One workflow connecting two or three apps you already use',
+      'For example, form entries saved to a spreadsheet with an email notification',
+      'Set up in a tool such as Zapier, Make or similar',
+      'Tested with real examples before handover',
+      'A short written guide explaining how it works'
+    ],
+    readyIn: 'Ready in about 1 week',
+    cta: 'Discuss Single Automation →'
+  },
+  {
+    id: 'workflow-pack',
+    name: 'Workflow Pack',
+    prefix: 'from',
+    price: '£950',
+    tagline: 'A set of connected automations for a key part of your business.',
+    includesLabel: 'Everything in Single Automation, plus:',
+    features: [
+      'Up to four linked automations working together',
+      'A simple reporting dashboard, e.g. in Google Sheets or Looker Studio',
+      'Error alerts, so you know if something stops working',
+      'A 30-minute handover call by phone or video'
+    ],
+    readyIn: 'Ready in about 2–3 weeks',
+    cta: 'Discuss Workflow Pack →'
+  },
+  {
+    id: 'operations-toolkit',
+    name: 'Operations Toolkit',
+    prefix: 'from',
+    price: '£2,250',
+    tagline: 'Connected tools and dashboards across one area of your business.',
+    includesLabel: 'Everything in Workflow Pack, plus:',
+    features: [
+      'A planning call to map how that area of your business runs today',
+      'Automations, tools and dashboards designed as one connected system',
+      'Custom templates or simple internal tools where needed',
+      'Data tidied and imported from your existing spreadsheets',
+      '30 days of support after handover for adjustments'
+    ],
+    readyIn: 'Ready in about 3–5 weeks',
+    cta: 'Discuss Operations Toolkit →'
+  }
+];
+
+const BUSINESS_TOOLS_FOOTER = {
+  groups: [
+    { label: 'Automation:', tools: 'Zapier · Make · Airtable' },
+    { label: 'Reporting:', tools: 'Google Sheets · Looker Studio' },
+    { label: 'Everyday tools:', tools: 'Spreadsheet templates · Small scripts · Custom trackers' }
+  ],
+  note: 'Using something else? Just ask, as most tools can be connected.'
+};
+
+const BUSINESS_TOOLS_WEB_APPS_LINK = { lead: 'Need something bigger, with logins or your own data?', link: 'Explore Web Apps →' };
+
+const WEB_APP_PACKAGES = [
+  {
+    id: 'discovery',
+    name: 'Discovery',
+    price: '£450',
+    priceNote: 'Credited against your build',
+    tagline: 'A clear plan and a fixed quote before any build begins.',
+    includesLabel: 'What’s included:',
+    features: [
+      'A 60-minute planning call (phone or video) to understand your business and goals',
+      'Follow-up questions by email to fill in any gaps',
+      'Feature list, prioritised into must-haves and later additions',
+      'Recommended approach, tools and user journeys',
+      'Fixed quote, timeline and written summary sent by email, yours to keep even if you don’t go ahead'
+    ],
+    readyIn: 'Ready in about 1 week',
+    cta: 'Book Discovery ⊹'
+  },
+  {
+    id: 'signature-app',
+    name: 'Signature App',
+    prefix: 'from',
+    price: '£4,500',
+    tagline: 'For a focused tool with one clear job.',
+    includesLabel: 'Everything in Discovery, plus:',
+    features: [
+      'One core workflow, e.g. bookings, enquiries or an internal tracker',
+      'Up to two user types, e.g. you and your customers',
+      'Secure logins and a simple admin dashboard',
+      'One integration, e.g. email, calendar or payments',
+      'Tested on mobile, tablet and desktop before launch'
+    ],
+    readyIn: 'Ready in about 4–6 weeks',
+    cta: 'Discuss Signature App →'
+  },
+  {
+    id: 'bespoke-app',
+    name: 'Bespoke App',
+    prefix: 'from',
+    price: '£8,500',
+    tagline: 'For apps with more moving parts.',
+    includesLabel: 'Everything in Signature App, plus:',
+    features: [
+      'Multiple workflows and user roles',
+      'Custom dashboards and reporting',
+      'Up to three integrations',
+      'Data import from existing spreadsheets or systems',
+      'Launch support and a handover walkthrough'
+    ],
+    readyIn: 'Ready in about 8–10 weeks',
+    cta: 'Discuss Bespoke App →'
+  },
+  {
+    id: 'custom-build',
+    name: 'Custom Build',
+    price: '£15,000+',
+    priceNote: 'Quoted after discovery',
+    tagline: 'For larger platforms and long-term products',
+    includesLabel: 'Everything in Bespoke App, plus:',
+    features: [
+      'Multi-feature platforms, portals or SaaS-style products',
+      'Advanced integrations, payments and automation',
+      'Phased delivery, starting with a working first version',
+      'A roadmap for future features and growth',
+      'Ongoing development support after launch'
+    ],
+    note: 'Timeline and final price agreed during discovery.',
+    cta: 'Discuss Custom Build →'
+  }
+];
+
+const WEB_APP_EXAMPLES = [
+  'Internal dashboards with logins and user roles',
+  'Staff tools such as job trackers, stock systems and admin panels',
+  'Client portals, secure customer logins and account areas',
+  'Larger automation systems with their own interface'
+];
+
+// Dialog keyboard handling: focus moves in on open, Escape closes, Tab/Shift+Tab stay inside,
+// and focus returns to the element that opened the dialog when it closes.
+function useDialogFocus(isOpen, dialogRef, onClose, returnFocusRef) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const getFocusable = () => Array.from(dialogRef.current?.querySelectorAll(FOCUSABLE_SELECTOR) ?? []);
+    getFocusable()[0]?.focus();
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const focusable = getFocusable();
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const inside = dialogRef.current.contains(document.activeElement);
+
+      if (e.shiftKey && (document.activeElement === first || !inside)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !inside)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    const opener = returnFocusRef.current;
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      opener?.focus();
+    };
+  }, [isOpen]);
+}
+
+// --- Footer details ---
+const STUDIO_AVAILABILITY = 'Booking Projects for Winter';
+const CONTACT_EMAIL = 'contact@irisoak.dev';
+
+// Portfolio Partnership round status: 'open' | 'filled' | 'soon'
+const PARTNERSHIP_STATUS = 'open';
+const PARTNERSHIP_STATUS_LABELS = { open: 'Open', filled: 'Places filled', soon: 'Opening soon' };
+// Number of businesses in the current round
+const PARTNERSHIP_PLACES = '3';
+
+// --- Enquiry form (submits to /api/enquiry; see api/enquiry.js) ---
+// Choice ids match the Studio Offerings ids, so "Discuss…" buttons can preselect them.
+const ENQUIRY_NEEDS = [
+  { id: 'websites', label: 'Websites', desc: SERVICE_DESCRIPTIONS.websites },
+  { id: 'booking-integrations', label: 'Bookings & integrations', desc: SERVICE_DESCRIPTIONS['booking-integrations'] },
+  { id: 'business-tools', label: 'Business tools', desc: SERVICE_DESCRIPTIONS['business-tools'] },
+  { id: 'web-apps', label: 'Web apps', desc: SERVICE_DESCRIPTIONS['web-apps'] },
+  { id: 'care-plans', label: 'Site maintenance', desc: SERVICE_DESCRIPTIONS['care-plans'] },
+  { id: 'not-sure', label: 'Not sure yet', desc: 'Tell us what you’re trying to do and we’ll suggest the right fit.' }
+];
+const ENQUIRY_LAUNCH_OPTIONS = ['ASAP', 'Within a month', '1–3 months', 'Flexible'];
+// Optional preference only, never a quote
+const ENQUIRY_BUDGET_OPTIONS = ['Under £1,000', '£1,000–£5,000', '£5,000–£15,000', '£15,000+', 'Not sure yet'];
+const ENQUIRY_ENDPOINT = '/api/enquiry';
+const ENQUIRY_TIMEOUT_MS = 20000;
+const EMPTY_ENQUIRY = { name: '', business: '', email: '', message: '', launch: '', budget: '' };
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Returns { field: message } for invalid fields; expects already-trimmed values.
+const validateEnquiry = (details) => {
+  const errors = {};
+  if (!details.name) errors.name = 'Enter your name.';
+  if (!details.email) errors.email = 'Enter your email address.';
+  else if (!EMAIL_PATTERN.test(details.email)) errors.email = 'Enter an email address in the correct format, like name@example.com.';
+  return errors;
+};
+
+const trimEnquiry = (details) => Object.fromEntries(Object.entries(details).map(([key, value]) => [key, value.trim()]));
+
+// "Signature (£695)", "Smart Forms (from £450)"
+const packageLabel = (pkg) => `${pkg.name} (${pkg.prefix ? `${pkg.prefix} ` : ''}${pkg.price})`;
 
 export default function App() {
   // Configurator state (restored from localStorage; drawer state is not persisted)
@@ -294,30 +704,47 @@ export default function App() {
   const drawerRef = useRef(null);
 
   // Studio Details
-  const studioName = 'IRIS & OAK / STUDIO';
+  const studioName = "IRIS & OAK";
   const studioTagline = 'We design and build high-precision websites and platforms, and provide ongoing care so you can scale with confidence.';
-  const [studioStatus, setStudioStatus] = useState('Available for Q4/Q1 Sprints & Care Retainers');
+  const studioStatus = 'Now Booking Projects for Winter';
 
   // Filtering state
   const [activeCategory, setActiveCategory] = useState('All');
   const [selectedProject, setSelectedProject] = useState(null);
-  const [viewMode, setViewMode] = useState('preview'); // 'preview' | 'blueprint'
   
-  // Estimator Form State
-  const [estimatorStep, setEstimatorStep] = useState(1);
-  const [projectScope, setProjectScope] = useState([]);
-  const [budgetRange, setBudgetRange] = useState('$5k - $10k');
-  const [timeline, setTimeline] = useState('4-6 Weeks');
-  const [retainerInterest, setRetainerInterest] = useState('Growth Care ($1.85k/mo)');
+  // Enquiry form
+  const [enquiry, setEnquiry] = useState(EMPTY_ENQUIRY);
+  const [enquiryNeeds, setEnquiryNeeds] = useState([]); // ENQUIRY_NEEDS ids
+  const [packageInterest, setPackageInterest] = useState('');
+  const [honeypot, setHoneypot] = useState('');
+  const [formErrors, setFormErrors] = useState({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
+  const errorSummaryRef = useRef(null);
+  const enquirySentRef = useRef(null);
   const [billingPeriod, setBillingPeriod] = useState('monthly'); // 'monthly' | 'annual'
-  const [clientDetails, setClientDetails] = useState({ name: '', email: '', company: '', details: '' });
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  const [copiedBrief, setCopiedBrief] = useState(false);
+
+  // Studio Offerings tabs + header dropdown
+  const [offeringTab, setOfferingTab] = useState('websites');
+  const [isOfferingsMenuOpen, setIsOfferingsMenuOpen] = useState(false);
+  const offeringsRef = useRef(null);
+  const offeringTabRefs = useRef({});
+  const offeringsMenuRef = useRef(null);
+  const offeringsMenuButtonRef = useRef(null);
+  const carePlansRef = useRef(null);
+
+  // Tools we often use
+  const toolsGridRef = useRef(null);
+  const [toolsRevealed, setToolsRevealed] = useState(false);
+  const [toolsRevealDone, setToolsRevealDone] = useState(false);
 
   const activeTheme = highContrast
     ? { ...COLOR_THEMES[themeKey], ...COLOR_THEMES[themeKey].highContrast }
     : COLOR_THEMES[themeKey];
   const activeFont = TYPOGRAPHY_STYLES[typographyKey];
+  // Green status text: emerald-400 lacks contrast on the light themes, so use emerald-700 there
+  const successText = themeKey === 'swiss' || themeKey === 'editorial' ? 'text-emerald-700' : 'text-emerald-400';
+  const errorText = themeKey === 'swiss' || themeKey === 'editorial' ? 'text-red-700' : 'text-red-400';
 
   useEffect(() => {
     document.documentElement.style.fontSize = TEXT_SIZES[textSize].value;
@@ -334,102 +761,342 @@ export default function App() {
     }
   }, [themeKey, typographyKey, textSize, highContrast]);
 
-  // Drawer keyboard handling: focus moves in on open, Escape closes, Tab stays inside,
-  // and focus returns to the opener on close.
+  useDialogFocus(isDrawerOpen, drawerRef, () => setIsDrawerOpen(false), configButtonRef);
+
+  // Project popup: opened from a card's title button, which gets focus back on close
+  const projectDialogRef = useRef(null);
+  const projectOpenerRef = useRef(null);
+  const projectBackdropPressRef = useRef(false);
+  useDialogFocus(!!selectedProject, projectDialogRef, () => setSelectedProject(null), projectOpenerRef);
+
+  // Portfolio Partnership popup (opened from the footer)
+  const [isPartnershipOpen, setIsPartnershipOpen] = useState(false);
+  const partnershipDialogRef = useRef(null);
+  const partnershipOpenerRef = useRef(null);
+  const partnershipBackdropPressRef = useRef(false);
+  useDialogFocus(isPartnershipOpen, partnershipDialogRef, () => setIsPartnershipOpen(false), partnershipOpenerRef);
+
+  // Move focus to the confirmation once the server has confirmed the enquiry was received
   useEffect(() => {
-    if (!isDrawerOpen) return;
+    if (submitStatus === 'sent') enquirySentRef.current?.focus();
+  }, [submitStatus]);
 
-    const getFocusable = () => Array.from(drawerRef.current?.querySelectorAll(FOCUSABLE_SELECTOR) ?? []);
-    getFocusable()[0]?.focus();
+  // Studio Offerings: show a category's tab and bring the offerings into view.
+  // `focusTab` moves keyboard focus to the tab (used when arriving from the header dropdown).
+  const showOffering = (id, { focusTab = false } = {}) => {
+    if (id === CARE_OFFERING.id) {
+      carePlansRef.current?.scrollIntoView();
+      if (focusTab) carePlansRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    setOfferingTab(id);
+    requestAnimationFrame(() => {
+      offeringsRef.current?.scrollIntoView();
+      if (focusTab) offeringTabRefs.current[id]?.focus({ preventScroll: true });
+    });
+  };
 
+  // Support links such as /#web-apps by opening the matching tab.
+  useEffect(() => {
+    const syncFromHash = () => {
+      const id = window.location.hash.slice(1);
+      if (OFFERING_CATEGORIES.some((c) => c.id === id)) showOffering(id);
+    };
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
+    return () => window.removeEventListener('hashchange', syncFromHash);
+  }, []);
+
+  // Header dropdown: close on Escape (returning focus to its button) or on an outside click.
+  useEffect(() => {
+    if (!isOfferingsMenuOpen) return;
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        e.preventDefault();
-        setIsDrawerOpen(false);
-        return;
-      }
-      if (e.key !== 'Tab') return;
-
-      const focusable = getFocusable();
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const insideDrawer = drawerRef.current.contains(document.activeElement);
-
-      if (e.shiftKey && (document.activeElement === first || !insideDrawer)) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && (document.activeElement === last || !insideDrawer)) {
-        e.preventDefault();
-        first.focus();
+        setIsOfferingsMenuOpen(false);
+        offeringsMenuButtonRef.current?.focus();
       }
     };
-
+    const handlePointerDown = (e) => {
+      if (!offeringsMenuRef.current?.contains(e.target)) setIsOfferingsMenuOpen(false);
+    };
     document.addEventListener('keydown', handleKeyDown);
-    const opener = configButtonRef.current;
+    document.addEventListener('mousedown', handlePointerDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      opener?.focus();
+      document.removeEventListener('mousedown', handlePointerDown);
     };
-  }, [isDrawerOpen]);
+  }, [isOfferingsMenuOpen]);
 
-  // Calculated estimates based on user selections
-  const estimatedTotal = useMemo(() => {
-    let base = 0;
-    if (projectScope.includes('Design')) base += 3500;
-    if (projectScope.includes('Development')) base += 4500;
-    if (projectScope.includes('Brand System')) base += 2500;
-    if (projectScope.includes('Maintenance Strategy')) base += 1200;
+  const handleOfferingsMenuSelect = (e, id) => {
+    e.preventDefault();
+    setIsOfferingsMenuOpen(false);
+    window.history.replaceState(null, '', `#${id}`);
+    showOffering(id, { focusTab: true });
+  };
 
-    let multiplier = 1;
-    if (budgetRange === '< $5k') multiplier = 0.8;
-    if (budgetRange === '$10k - $20k') multiplier = 1.3;
-    if (budgetRange === '$20k+') multiplier = 1.8;
+  // Arrow keys move between offering tabs (ARIA tabs pattern).
+  const handleOfferingTabKeyDown = (e) => {
+    const ids = OFFERING_CATEGORIES.map((c) => c.id);
+    const index = ids.indexOf(offeringTab);
+    const next =
+      e.key === 'ArrowRight' ? ids[(index + 1) % ids.length]
+      : e.key === 'ArrowLeft' ? ids[(index - 1 + ids.length) % ids.length]
+      : e.key === 'Home' ? ids[0]
+      : e.key === 'End' ? ids[ids.length - 1]
+      : null;
+    if (!next) return;
+    e.preventDefault();
+    setOfferingTab(next);
+    offeringTabRefs.current[next]?.focus();
+  };
 
-    return Math.round(base * multiplier);
-  }, [projectScope, budgetRange]);
+  // Package card shared by Websites and Booking & Integrations.
+  // Optional fields: prefix (e.g. "from"), priceNote, note, readyIn, cta (defaults to "Discuss {name}"), popular.
+  const renderPackageCard = (pkg, need) => (
+    <div
+      key={pkg.id}
+      className={`relative p-6 sm:p-8 rounded-xl border flex flex-col justify-between transition-all ${
+        pkg.popular
+          ? `ring-2 ring-emerald-500/50 ${activeTheme.cardBg} ${activeTheme.border}`
+          : `${activeTheme.cardBg} ${activeTheme.border}`
+      }`}
+    >
+      {pkg.popular && (
+        <span className="absolute -top-3 right-6 bg-emerald-500 text-black font-mono text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+          Most Popular
+        </span>
+      )}
+
+      <div>
+        <h4 className="text-lg font-bold mb-1">{pkg.name}</h4>
+        <p className={`text-xs mb-6 ${activeTheme.textMuted}`}>{pkg.tagline}</p>
+        <div className="text-3xl font-bold font-mono">
+          {pkg.prefix && <span className={`text-xs font-sans font-normal ${activeTheme.textMuted}`}>{pkg.prefix} </span>}
+          {pkg.price}
+        </div>
+        {pkg.priceNote && <p className={`text-xs mt-1 ${activeTheme.textMuted}`}>{pkg.priceNote}</p>}
+
+        <div className={`my-6 border-t ${activeTheme.border}`} />
+
+        <p className="text-xs font-bold mb-3">{pkg.includesLabel}</p>
+        <ul className="space-y-3 mb-6">
+          {pkg.features.map((feat) => (
+            <li key={feat} className="flex items-start gap-2 text-xs">
+              <Check size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+              <span>{feat}</span>
+            </li>
+          ))}
+        </ul>
+
+        {pkg.note && <p className={`text-xs ${pkg.readyIn ? 'mb-2' : 'mb-6'} ${activeTheme.textMuted}`}>{pkg.note}</p>}
+        {pkg.readyIn && (
+          <p className={`text-xs mb-6 flex items-center gap-1.5 ${activeTheme.textMuted}`}>
+            <Clock size={12} aria-hidden="true" className="shrink-0" />
+            {pkg.readyIn}
+          </p>
+        )}
+      </div>
+
+      <a
+        href="#contact"
+        onClick={() => preselectEnquiry({ need, pkg: packageLabel(pkg) })}
+        className={`w-full py-2.5 text-center rounded text-xs font-medium transition-all ${
+          pkg.popular ? activeTheme.accent : `border ${activeTheme.border} hover:bg-zinc-800/30`
+        }`}
+      >
+        {pkg.cta || `Discuss ${pkg.name}`}
+      </a>
+    </div>
+  );
+
+  // Orbit artwork for a fixed 720×520 stage (coordinates match ORBIT_PATH), drawn in currentColor.
+  // Used by the hero background and the Enquire section; `idPrefix` keeps SVG ids unique per use.
+  const renderOrbitArtwork = (idPrefix) => (
+    <>
+      {/* Soft colour haze around the sphere and along the orbit */}
+      <div className="absolute left-[380px] top-[93px] w-[260px] h-[260px] rounded-full bg-current opacity-20 blur-3xl animate-orbit-glow motion-reduce:animate-none" />
+      <div className="absolute left-[160px] top-[150px] w-[420px] h-[224px] rounded-full bg-current opacity-[0.07] blur-3xl rotate-[28deg]" />
+
+      <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 720 520" fill="none">
+        <defs>
+          <linearGradient id={`${idPrefix}-stroke`} gradientUnits="userSpaceOnUse" x1="95" y1="119" x2="625" y2="401">
+            <stop offset="0" stopColor="currentColor" stopOpacity="0.15" />
+            <stop offset="0.45" stopColor="currentColor" stopOpacity="0.55" />
+            <stop offset="1" stopColor="currentColor" stopOpacity="0.9" />
+          </linearGradient>
+          <radialGradient id={`${idPrefix}-sphere`} cx="0.35" cy="0.3" r="0.75">
+            <stop offset="0" stopColor="#ffffff" stopOpacity="0.55" />
+            <stop offset="0.35" stopColor="currentColor" stopOpacity="0.08" />
+            <stop offset="0.85" stopColor="currentColor" stopOpacity="0.18" />
+            <stop offset="1" stopColor="currentColor" stopOpacity="0.5" />
+          </radialGradient>
+          <filter id={`${idPrefix}-blur`} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" />
+          </filter>
+        </defs>
+
+        {/* Orbit line with a soft glow underneath */}
+        <path d={ORBIT_PATH} stroke="currentColor" strokeOpacity="0.35" strokeWidth="4" filter={`url(#${idPrefix}-blur)`} />
+        <path d={ORBIT_PATH} stroke={`url(#${idPrefix}-stroke)`} strokeWidth="1.25" />
+
+        {/* Glass sphere sitting on the orbit */}
+        <circle cx="549" cy="223" r="48" fill={`url(#${idPrefix}-sphere)`} />
+        <circle cx="549" cy="223" r="48" stroke="currentColor" strokeOpacity="0.45" strokeWidth="1" />
+        <ellipse cx="533" cy="203" rx="14" ry="8" fill="#ffffff" fillOpacity="0.35" transform="rotate(-30 533 203)" />
+
+        {/* Direction arrows */}
+        <g stroke="currentColor" strokeOpacity="0.6" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M 600 120 Q 650 130 672 178" />
+          <path d="M 662.3 171.4 L 672 178 L 673.3 166.4" />
+          <path d="M 360 360 Q 315 352 296 320" />
+          <path d="M 306.3 325.5 L 296 320 L 296 331.7" />
+        </g>
+      </svg>
+
+      {/* Dots travelling along the orbit (fixed positions when motion is reduced) */}
+      {[
+        { size: 'w-2 h-2', delay: '0s', rest: '12%' },
+        { size: 'w-1.5 h-1.5', delay: '-30s', rest: '58%' },
+        { size: 'w-1 h-1', delay: '-45s', rest: '80%' }
+      ].map((dot) => (
+        <span
+          key={dot.rest}
+          className={`absolute left-0 top-0 ${dot.size} rounded-full bg-current shadow-[0_0_10px_currentColor] animate-orbit-travel motion-reduce:animate-none`}
+          style={{ offsetPath: `path('${ORBIT_PATH}')`, offsetRotate: '0deg', offsetDistance: dot.rest, animationDelay: dot.delay }}
+        />
+      ))}
+    </>
+  );
+
+  // Decorative step connector placed in the grid gap after a process card (offset 1px to clear the card border):
+  // horizontal (line + chevron, vertically centred on the cards) from md, vertical below md.
+  // A soft dot travels along each line; `step` offsets the second connector by half a cycle.
+  const renderProcessConnector = (step) => (
+    <span aria-hidden="true" className={`pointer-events-none absolute flex items-center justify-center ${activeTheme.highlight}
+      left-1/2 top-[calc(100%+1px)] h-8 w-5 -translate-x-1/2 flex-col
+      md:left-[calc(100%+1px)] md:top-1/2 md:h-5 md:w-8 md:translate-x-0 md:-translate-y-1/2 md:flex-row`}>
+      <span className="absolute bg-current opacity-30 left-1/2 inset-y-0 w-px -translate-x-1/2 md:left-0 md:right-0 md:inset-y-auto md:top-1/2 md:w-auto md:h-px md:translate-x-0 md:-translate-y-1/2" />
+      {/* Travelling pulse (vertical below md, horizontal from md); hidden with reduced motion */}
+      <span
+        style={{ animationDelay: `${step * 2}s` }}
+        className="absolute left-1/2 top-0 -ml-[3px] -mt-[3px] w-1.5 h-1.5 rounded-full bg-current opacity-0 animate-connector-pulse-y md:hidden motion-reduce:hidden"
+      />
+      <span
+        style={{ animationDelay: `${step * 2}s` }}
+        className="absolute left-0 top-1/2 -ml-[3px] -mt-[3px] w-1.5 h-1.5 rounded-full bg-current opacity-0 animate-connector-pulse-x hidden md:block motion-reduce:hidden md:motion-reduce:hidden"
+      />
+      <span
+        style={{ animationDelay: `${step * 2}s` }}
+        className={`relative flex items-center justify-center w-5 h-5 rounded-full border ${activeTheme.border} ${activeTheme.bg} animate-connector-glow motion-reduce:animate-none`}
+      >
+        <ChevronDown size={12} className="md:hidden" />
+        <ChevronRight size={12} className="hidden md:block" />
+      </span>
+    </span>
+  );
+
+  useEffect(() => {
+    const grid = toolsGridRef.current;
+    if (!grid || typeof IntersectionObserver === 'undefined') {
+      setToolsRevealed(true);
+      setToolsRevealDone(true);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setToolsRevealed(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.2 });
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, []);
+
+  // Drop the stagger delays once the reveal has played, so hover/focus responds immediately
+  useEffect(() => {
+    if (!toolsRevealed || toolsRevealDone) return;
+    const timer = setTimeout(() => setToolsRevealDone(true), TECH_STACK.length * 70 + 600);
+    return () => clearTimeout(timer);
+  }, [toolsRevealed, toolsRevealDone]);
 
   const filteredProjects = useMemo(() => {
     if (activeCategory === 'All') return SAMPLE_PROJECTS;
     return SAMPLE_PROJECTS.filter(p => p.category === activeCategory);
   }, [activeCategory]);
 
-  const toggleScopeOption = (option) => {
-    setProjectScope(prev => 
-      prev.includes(option) ? prev.filter(item => item !== option) : [...prev, option]
-    );
+  const toggleEnquiryNeed = (id) => {
+    setEnquiryNeeds((prev) => (prev.includes(id) ? prev.filter((need) => need !== id) : [...prev, id]));
   };
 
-  const generateBriefText = () => {
-    return `--- STUDIO INQUIRY BRIEF ---
-Studio Target: ${studioName}
-Client: ${clientDetails.name} (${clientDetails.email})
-Company: ${clientDetails.company || 'N/A'}
-Scope Required: ${projectScope.join(', ') || 'Not specified'}
-Selected Budget Range: ${budgetRange}
-Target Timeline: ${timeline}
-Care/Maintenance Retainer: ${retainerInterest}
-Estimated Value: ~$${estimatedTotal.toLocaleString()}
-
-Project Description:
-${clientDetails.details || 'No additional details provided.'}
-----------------------------`;
+  const updateEnquiry = (field, value) => {
+    const next = { ...enquiry, [field]: value };
+    setEnquiry(next);
+    // After a failed submit, update errors as the visitor corrects fields
+    if (submitAttempted) setFormErrors(validateEnquiry(trimEnquiry(next)));
   };
 
-  const handleCopyBrief = () => {
-    navigator.clipboard.writeText(generateBriefText());
-    setCopiedBrief(true);
-    setTimeout(() => setCopiedBrief(false), 2000);
+  const handleEnquirySubmit = async (e) => {
+    e.preventDefault();
+    if (submitStatus === 'sending') return; // no duplicate submissions
+
+    const trimmed = trimEnquiry(enquiry);
+    const errors = validateEnquiry(trimmed);
+    setSubmitAttempted(true);
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setSubmitStatus('idle');
+      requestAnimationFrame(() => errorSummaryRef.current?.focus());
+      return;
+    }
+
+    setSubmitStatus('sending');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), ENQUIRY_TIMEOUT_MS);
+    try {
+      const response = await fetch(ENQUIRY_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          ...trimmed,
+          needs: ENQUIRY_NEEDS.filter((need) => enquiryNeeds.includes(need.id)).map((need) => need.label),
+          package: packageInterest,
+          contact_reference: honeypot
+        }),
+        signal: controller.signal
+      });
+      const result = await response.json().catch(() => null);
+      // Only a server response that explicitly confirms receipt counts as sent
+      if (!response.ok || result?.ok !== true) throw new Error('Enquiry not confirmed');
+      setSubmitStatus('sent');
+    } catch {
+      setSubmitStatus('error'); // entries are kept so the visitor can retry
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
+  // "Discuss…" and care-plan buttons: tick the matching choice and note the package
+  const preselectEnquiry = ({ need, pkg }) => {
+    if (need) setEnquiryNeeds((prev) => (prev.includes(need) ? prev : [...prev, need]));
+    if (pkg) setPackageInterest(pkg);
   };
 
   return (
     <div className={`min-h-screen ${activeTheme.bg} ${activeTheme.text} ${activeFont.class} transition-colors duration-300 relative selection:bg-zinc-700 selection:text-white`}>
       
+      <a
+        href="#main-content"
+        className={`sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:px-4 focus:py-2 focus:rounded focus:text-sm focus:font-medium ${activeTheme.accent} ${FOCUS_RING}`}
+      >
+        Skip to content
+      </a>
+
       {/* GLOBAL TOP NAVIGATION BAR */}
       <header className={`sticky top-0 z-40 backdrop-blur-md border-b ${activeTheme.border} ${activeTheme.bg}/80 transition-colors`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+        {/* Tablet and small desktop (md–lg): nav wraps onto its own row; from xl everything sits on one row */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-auto md:py-3 xl:h-16 xl:py-0 flex flex-wrap xl:flex-nowrap items-center justify-between gap-y-3">
+          <div className="flex items-center gap-3 whitespace-nowrap">
+            <div aria-hidden="true" className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
               <a href="/" className="font-bold tracking-wider text-sm uppercase">
                 {studioName}
               </a>
@@ -439,11 +1106,40 @@ ${clientDetails.details || 'No additional details provided.'}
           </div>
 
           {/* Navigation Items */}
-          <nav className="hidden md:flex items-center gap-8 text-xs font-medium tracking-wide uppercase">
+          <nav className={`hidden md:flex order-last xl:order-none w-full xl:w-auto justify-center items-center gap-8 pt-3 xl:pt-0 border-t xl:border-t-0 ${activeTheme.border} text-xs font-medium tracking-wide uppercase`}>
             <a href="#portfolio" className="hover:opacity-70 transition-opacity">Portfolio</a>
-            <a href="#services" className="hover:opacity-70 transition-opacity">Studio Offerings</a>
+            <div ref={offeringsMenuRef} className="relative">
+              <button
+                ref={offeringsMenuButtonRef}
+                type="button"
+                aria-expanded={isOfferingsMenuOpen}
+                aria-controls="offerings-menu"
+                onClick={() => setIsOfferingsMenuOpen((open) => !open)}
+                className={`inline-flex items-center gap-1 uppercase tracking-wide hover:opacity-70 transition-opacity rounded ${FOCUS_RING}`}
+              >
+                Studio Offerings
+                <ChevronDown size={14} aria-hidden="true" className={`transition-transform ${isOfferingsMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isOfferingsMenuOpen && (
+                <ul
+                  id="offerings-menu"
+                  className={`absolute left-1/2 -translate-x-1/2 top-full mt-3 min-w-[15rem] py-2 rounded-lg border shadow-xl animate-fade-in motion-reduce:animate-none ${activeTheme.bg} ${activeTheme.border} ${activeTheme.text}`}
+                >
+                  {OFFERINGS_MENU.map((item) => (
+                    <li key={item.id}>
+                      <a
+                        href={`#${item.id}`}
+                        onClick={(e) => handleOfferingsMenuSelect(e, item.id)}
+                        className={`block px-4 py-2.5 whitespace-nowrap hover:opacity-70 transition-opacity ${FOCUS_RING}`}
+                      >
+                        {item.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <a href="#engineering" className="hover:opacity-70 transition-opacity">Engineering</a>
-            <a href="#estimator" className="hover:opacity-70 transition-opacity">Estimator</a>
           </nav>
 
           {/* Action Controls */}
@@ -452,15 +1148,16 @@ ${clientDetails.details || 'No additional details provided.'}
               ref={configButtonRef}
               aria-haspopup="dialog"
               aria-expanded={isDrawerOpen}
+              aria-label="Studio Configurator"
               onClick={() => setIsDrawerOpen(true)}
               className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-all ${activeTheme.accentBorder} ${activeTheme.cardBg} hover:opacity-90`}
             >
-              <Sliders size={14} />
+              <Sliders size={14} aria-hidden="true" />
               <span className="hidden sm:inline">Studio Configurator</span>
             </button>
             
             <a
-              href="#estimator"
+              href="#contact"
               className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${activeTheme.accent}`}
             >
               Enquire
@@ -469,6 +1166,7 @@ ${clientDetails.details || 'No additional details provided.'}
         </div>
       </header>
 
+      <main id="main-content" tabIndex={-1} className="focus:outline-none">
       {/* DYNAMIC STUDIO HER0 SECTION */}
       <section className="relative isolate pt-20 pb-16 md:pt-32 md:pb-24 border-b border-dashed border-zinc-800/40 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Decorative slow-orbit background (behind content, non-interactive, static with reduced motion) */}
@@ -478,65 +1176,14 @@ ${clientDetails.details || 'No additional details provided.'}
         >
           {/* Fixed 720×520 stage (matches ORBIT_PATH coordinates), scaled down on smaller screens */}
           <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[720px] h-[520px] origin-right scale-[0.55] sm:scale-75 lg:scale-100 opacity-70 md:opacity-100">
-            {/* Soft colour haze around the sphere and along the orbit */}
-            <div className="absolute left-[380px] top-[93px] w-[260px] h-[260px] rounded-full bg-current opacity-20 blur-3xl animate-orbit-glow motion-reduce:animate-none" />
-            <div className="absolute left-[160px] top-[150px] w-[420px] h-[224px] rounded-full bg-current opacity-[0.07] blur-3xl rotate-[28deg]" />
-
-            <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 720 520" fill="none">
-              <defs>
-                <linearGradient id="hero-orbit-stroke" gradientUnits="userSpaceOnUse" x1="95" y1="119" x2="625" y2="401">
-                  <stop offset="0" stopColor="currentColor" stopOpacity="0.15" />
-                  <stop offset="0.45" stopColor="currentColor" stopOpacity="0.55" />
-                  <stop offset="1" stopColor="currentColor" stopOpacity="0.9" />
-                </linearGradient>
-                <radialGradient id="hero-orbit-sphere" cx="0.35" cy="0.3" r="0.75">
-                  <stop offset="0" stopColor="#ffffff" stopOpacity="0.55" />
-                  <stop offset="0.35" stopColor="currentColor" stopOpacity="0.08" />
-                  <stop offset="0.85" stopColor="currentColor" stopOpacity="0.18" />
-                  <stop offset="1" stopColor="currentColor" stopOpacity="0.5" />
-                </radialGradient>
-                <filter id="hero-orbit-blur" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="4" />
-                </filter>
-              </defs>
-
-              {/* Orbit line with a soft glow underneath */}
-              <path d={ORBIT_PATH} stroke="currentColor" strokeOpacity="0.35" strokeWidth="4" filter="url(#hero-orbit-blur)" />
-              <path d={ORBIT_PATH} stroke="url(#hero-orbit-stroke)" strokeWidth="1.25" />
-
-              {/* Glass sphere sitting on the orbit */}
-              <circle cx="549" cy="223" r="48" fill="url(#hero-orbit-sphere)" />
-              <circle cx="549" cy="223" r="48" stroke="currentColor" strokeOpacity="0.45" strokeWidth="1" />
-              <ellipse cx="533" cy="203" rx="14" ry="8" fill="#ffffff" fillOpacity="0.35" transform="rotate(-30 533 203)" />
-
-              {/* Direction arrows */}
-              <g stroke="currentColor" strokeOpacity="0.6" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M 600 120 Q 650 130 672 178" />
-                <path d="M 662.3 171.4 L 672 178 L 673.3 166.4" />
-                <path d="M 360 360 Q 315 352 296 320" />
-                <path d="M 306.3 325.5 L 296 320 L 296 331.7" />
-              </g>
-            </svg>
-
-            {/* Dots travelling along the orbit (fixed positions when motion is reduced) */}
-            {[
-              { size: 'w-2 h-2', delay: '0s', rest: '12%' },
-              { size: 'w-1.5 h-1.5', delay: '-30s', rest: '58%' },
-              { size: 'w-1 h-1', delay: '-45s', rest: '80%' }
-            ].map((dot) => (
-              <span
-                key={dot.rest}
-                className={`absolute left-0 top-0 ${dot.size} rounded-full bg-current shadow-[0_0_10px_currentColor] animate-orbit-travel motion-reduce:animate-none`}
-                style={{ offsetPath: `path('${ORBIT_PATH}')`, offsetRotate: '0deg', offsetDistance: dot.rest, animationDelay: dot.delay }}
-              />
-            ))}
+            {renderOrbitArtwork('hero-orbit')}
           </div>
         </div>
 
         <div className="max-w-4xl">
           {/* Status Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 text-xs rounded-full border mb-6 backdrop-blur-sm opacity-90 border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
-            <Activity size={12} className="animate-spin text-emerald-400" />
+          <div className={`inline-flex items-center gap-2 px-3 py-1 text-xs rounded-full border mb-6 backdrop-blur-sm opacity-90 border-emerald-500/30 bg-emerald-500/10 ${successText}`}>
+            <Activity size={12} aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
             <span>{studioStatus}</span>
           </div>
 
@@ -553,10 +1200,10 @@ ${clientDetails.details || 'No additional details provided.'}
           {/* Hero Action Buttons */}
           <div className="flex flex-wrap gap-4 items-center">
             <a
-              href="#estimator"
+              href="#contact"
               className={`inline-flex items-center gap-2 px-6 py-3 rounded text-sm font-medium transition-all shadow-sm ${activeTheme.accent}`}
             >
-              <span>Build Project Brief</span>
+              <span>Plan your project</span>
               <ArrowUpRight size={16} />
             </a>
             <a
@@ -570,7 +1217,7 @@ ${clientDetails.details || 'No additional details provided.'}
         </div>
 
         {/* Minimal Metric Bar */}
-        <div className={`mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t ${activeTheme.border}`}>
+        <div className={`mt-20 grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8 border-t ${activeTheme.border}`}>
           <div>
             <div className="text-2xl font-bold font-mono">1-3 Weeks</div>
             <div className={`text-xs ${activeTheme.textMuted}`}>Typical Delivery Time</div>
@@ -594,7 +1241,7 @@ ${clientDetails.details || 'No additional details provided.'}
       </section>
 
       {/* SECTION 1: SELECTED WORK & CASE STUDIES */}
-      <section id="portfolio" className="scroll-mt-16 py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
+      <section id="portfolio" className="scroll-mt-16 md:scroll-mt-28 xl:scroll-mt-16 py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
           <div>
             <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Portfolio / Archive</div>
@@ -603,9 +1250,11 @@ ${clientDetails.details || 'No additional details provided.'}
 
           {/* Category Filter Pills */}
           <div className="flex flex-wrap gap-2">
-            {['All', 'Web Dev', 'Product Builds', 'Systems', 'Care Retainers'].map((cat) => (
+            {PORTFOLIO_FILTERS.map((cat) => (
               <button
                 key={cat}
+                type="button"
+                aria-pressed={activeCategory === cat}
                 onClick={() => setActiveCategory(cat)}
                 className={`px-3 py-1.5 text-xs rounded border transition-all ${
                   activeCategory === cat 
@@ -624,40 +1273,62 @@ ${clientDetails.details || 'No additional details provided.'}
           {filteredProjects.map((project) => (
             <div
               key={project.id}
-              onClick={() => setSelectedProject(project)}
-              className={`group cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${activeTheme.border} ${activeTheme.cardBg}`}
+              className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-emerald-400 ${activeTheme.border} ${activeTheme.cardBg}`}
             >
               {/* Card Image */}
               <div className="relative aspect-video overflow-hidden bg-zinc-900">
                 <img
                   src={project.image}
                   alt={project.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
                 />
-                <div className="absolute top-3 left-3">
-                  <span className={`text-[10px] uppercase font-mono tracking-wider px-2 py-1 rounded border backdrop-blur-md ${activeTheme.badge}`}>
-                    {project.category}
-                  </span>
-                </div>
+                {project.category && (
+                  <div className="absolute top-3 left-3">
+                    <span className={`text-[10px] uppercase font-mono tracking-wider px-2 py-1 rounded border backdrop-blur-md ${activeTheme.badge}`}>
+                      {project.category}
+                    </span>
+                  </div>
+                )}
+                {project.status && (
+                  <div className="absolute top-3 right-3">
+                    <span className={`text-[10px] uppercase font-mono tracking-wider px-2 py-1 rounded border backdrop-blur-md ${activeTheme.badge}`}>
+                      {project.status}
+                    </span>
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <span className="text-xs uppercase tracking-widest font-mono text-white bg-black/70 px-4 py-2 rounded-full border border-white/20 flex items-center gap-2">
-                    Inspect Project Specs <Maximize2 size={12} />
+                    Inspect Project Specs <Maximize2 size={12} aria-hidden="true" />
                   </span>
                 </div>
               </div>
 
               {/* Card Body */}
               <div className="p-6">
-                <div className={`text-xs font-mono mb-1 ${activeTheme.textMuted}`}>{project.client}</div>
-                <h3 className="text-xl font-bold mb-3 group-hover:underline flex items-center justify-between">
-                  <span>{project.title}</span>
-                  <ArrowUpRight size={18} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                {project.client && <div className={`text-xs font-mono mb-1 ${activeTheme.textMuted}`}>{project.client}</div>}
+                <h3 className={`text-xl font-bold ${project.summary || project.tags.length ? 'mb-3' : ''} group-hover:underline flex items-center justify-between`}>
+                  {/* The button's ::after covers the whole card, so the card stays clickable and is keyboard-operable */}
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    onClick={(e) => {
+                      projectOpenerRef.current = e.currentTarget;
+                      setSelectedProject(project);
+                    }}
+                    className="text-left cursor-pointer focus:outline-none after:absolute after:inset-0 after:content-['']"
+                  >
+                    {project.title}
+                  </button>
+                  <ArrowUpRight size={18} aria-hidden="true" className="opacity-0 group-hover:opacity-100 transition-opacity" />
                 </h3>
-                <p className={`text-sm leading-relaxed mb-6 ${activeTheme.textMuted}`}>
-                  {project.summary}
-                </p>
+                {project.summary && (
+                  <p className={`text-sm leading-relaxed ${project.tags.length ? 'mb-6' : ''} ${activeTheme.textMuted}`}>
+                    {project.summary}
+                  </p>
+                )}
 
                 {/* Tech Tags */}
+                {project.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-4 border-t border-zinc-800/30">
                   {project.tags.map((tag) => (
                     <span key={tag} className={`text-[11px] font-mono px-2 py-0.5 rounded ${activeTheme.badge}`}>
@@ -665,6 +1336,7 @@ ${clientDetails.details || 'No additional details provided.'}
                     </span>
                   ))}
                 </div>
+                )}
               </div>
             </div>
           ))}
@@ -673,28 +1345,48 @@ ${clientDetails.details || 'No additional details provided.'}
 
       {/* PROJECT DEEP DIVE MODAL */}
       {selectedProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className={`relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border p-6 md:p-8 shadow-2xl ${activeTheme.bg} ${activeTheme.border} ${activeTheme.text}`}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in motion-reduce:animate-none"
+          // Close on a backdrop click only when the press also started on the backdrop (not a drag out of the popup)
+          onMouseDown={(e) => { projectBackdropPressRef.current = e.target === e.currentTarget; }}
+          onClick={(e) => {
+            if (projectBackdropPressRef.current && e.target === e.currentTarget) setSelectedProject(null);
+          }}
+        >
+          <div
+            ref={projectDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="project-dialog-title"
+            className={`relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border p-6 md:p-8 shadow-2xl ${activeTheme.bg} ${activeTheme.border} ${activeTheme.text}`}
+          >
             
             <button
+              type="button"
+              aria-label="Close project details"
               onClick={() => setSelectedProject(null)}
-              className="absolute top-6 right-6 p-2 rounded-full hover:bg-zinc-800/50 transition-colors"
+              className={`absolute top-6 right-6 p-2 rounded-full hover:bg-zinc-800/50 transition-colors ${FOCUS_RING}`}
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
 
             <div className="mb-6">
-              <span className={`text-xs font-mono uppercase tracking-widest px-2.5 py-1 rounded border ${activeTheme.badge}`}>
-                {selectedProject.category}
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-bold mt-4 mb-1">{selectedProject.title}</h2>
-              <p className={`text-sm font-mono ${activeTheme.textMuted}`}>Client Partner: {selectedProject.client}</p>
+              <div className="flex flex-wrap gap-2">
+                {[selectedProject.category, selectedProject.status].filter(Boolean).map((pill) => (
+                  <span key={pill} className={`text-xs font-mono uppercase tracking-widest px-2.5 py-1 rounded border ${activeTheme.badge}`}>
+                    {pill}
+                  </span>
+                ))}
+              </div>
+              <h2 id="project-dialog-title" className="text-2xl sm:text-3xl font-bold mt-4 mb-1">{selectedProject.title}</h2>
+              {selectedProject.client && <p className={`text-sm font-mono ${activeTheme.textMuted}`}>Client Partner: {selectedProject.client}</p>}
             </div>
 
             <div className="relative aspect-video rounded-lg overflow-hidden mb-6 border border-zinc-800">
               <img src={selectedProject.image} alt={selectedProject.title} className="w-full h-full object-cover" />
             </div>
 
+            {Object.keys(selectedProject.stats).length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               {Object.entries(selectedProject.stats).map(([key, val]) => (
                 <div key={key} className={`p-4 rounded border ${activeTheme.cardBg} ${activeTheme.border}`}>
@@ -703,26 +1395,37 @@ ${clientDetails.details || 'No additional details provided.'}
                 </div>
               ))}
             </div>
+            )}
 
             <div className="space-y-6">
+              {selectedProject.details && (
               <div>
-                <h4 className="text-sm font-mono uppercase tracking-wider mb-2 font-bold">Project Scope & Deliverables</h4>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {selectedProject.deliverables.map((item) => (
-                    <li key={item} className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
+                <h3 className="text-sm font-mono uppercase tracking-wider mb-2 font-bold">{selectedProject.details.heading}</h3>
+                {selectedProject.details.items ? (
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {selectedProject.details.items.map((item) => (
+                      <li key={item} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 size={16} aria-hidden="true" className="text-emerald-500 shrink-0 mt-0.5" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={`text-sm leading-relaxed ${activeTheme.textMuted}`}>
+                    {selectedProject.details.text}
+                  </p>
+                )}
               </div>
+              )}
 
+              {selectedProject.technicalExecution && (
               <div>
-                <h4 className="text-sm font-mono uppercase tracking-wider mb-2 font-bold">Technical Execution</h4>
+                <h3 className="text-sm font-mono uppercase tracking-wider mb-2 font-bold">Technical Execution</h3>
                 <p className={`text-sm leading-relaxed ${activeTheme.textMuted}`}>
-                  {selectedProject.description}
+                  {selectedProject.technicalExecution}
                 </p>
               </div>
+              )}
 
               <div className="pt-6 border-t border-zinc-800/40 flex justify-end gap-3">
                 <button
@@ -732,7 +1435,7 @@ ${clientDetails.details || 'No additional details provided.'}
                   Close
                 </button>
                 <a
-                  href="#estimator"
+                  href="#contact"
                   onClick={() => setSelectedProject(null)}
                   className={`px-4 py-2 text-xs font-medium rounded ${activeTheme.accent}`}
                 >
@@ -745,53 +1448,154 @@ ${clientDetails.details || 'No additional details provided.'}
       )}
 
       {/* SECTION 2: SERVICES & CARE RETAINERS */}
-      <section id="services" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
-        <div className="max-w-3xl mb-16">
+      <section id="services" className="relative py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
+        <div className="max-w-3xl lg:max-w-none mb-16">
           <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Studio Offerings</div>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-            Bespoke Builds & Site Maintenance
+            Build it, connect it, keep it running
           </h2>
           <p className={`text-base leading-relaxed ${activeTheme.textMuted}`}>
-            We don't launch sites and walk away. Ongoing care means fewer surprises: updates handled, problems caught early, and a site that stays fast as your business grows.
+            Start with a website, add the tools your business runs on, and keep everything looked after, all with one studio.
           </p>
         </div>
 
-        {/* Studio Service Pillars */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-          <div className={`p-6 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}>
-            <div className="w-10 h-10 rounded border border-zinc-700/50 flex items-center justify-center mb-6">
-              <Layout size={20} className={activeTheme.highlight} />
+        {/* Studio Offerings: category tabs (Site Maintenance links to the care plans below) */}
+        <div ref={offeringsRef} id="offerings" className="mb-20 scroll-mt-20 md:scroll-mt-28 xl:scroll-mt-20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-10">
+            <div
+              role="tablist"
+              aria-label="Studio Offerings"
+              onKeyDown={handleOfferingTabKeyDown}
+              className="sm:col-span-2 lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+            >
+              {OFFERING_CATEGORIES.map((cat) => {
+                const selected = offeringTab === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    ref={(el) => { offeringTabRefs.current[cat.id] = el; }}
+                    type="button"
+                    role="tab"
+                    id={`offering-tab-${cat.id}`}
+                    aria-selected={selected}
+                    aria-controls={cat.id}
+                    tabIndex={selected ? 0 : -1}
+                    onClick={() => setOfferingTab(cat.id)}
+                    className={`p-4 rounded-lg border text-left flex flex-col items-start transition-all ${FOCUS_RING} ${
+                      selected
+                        ? `ring-2 ring-emerald-500/50 ${activeTheme.cardBg} ${activeTheme.border}`
+                        : `${activeTheme.border} hover:opacity-80`
+                    }`}
+                  >
+                    <cat.Icon size={18} aria-hidden="true" className={`mb-3 ${activeTheme.highlight}`} />
+                    <span className="block text-sm font-bold">{cat.name}</span>
+                    <span className={`block text-xs mt-1 ${activeTheme.textMuted}`}>{cat.positioning}</span>
+                  </button>
+                );
+              })}
             </div>
-            <h3 className="text-lg font-bold mb-2">1. Design</h3>
-            <p className={`text-sm leading-relaxed ${activeTheme.textMuted}`}>
-              Clear layouts, considered typography and a consistent look, shaped around your business
-            </p>
+            <a
+              href={`#${CARE_OFFERING.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.replaceState(null, '', `#${CARE_OFFERING.id}`);
+                showOffering(CARE_OFFERING.id, { focusTab: true });
+              }}
+              className={`p-4 rounded-lg border border-dashed text-left transition-all hover:opacity-80 ${FOCUS_RING} ${activeTheme.border}`}
+            >
+              <CARE_OFFERING.Icon size={18} aria-hidden="true" className={`mb-3 ${activeTheme.highlight}`} />
+              <span className="flex items-center gap-1 text-sm font-bold">
+                {CARE_OFFERING.name}
+                <ChevronDown size={14} aria-hidden="true" />
+              </span>
+              <span className={`block text-xs mt-1 ${activeTheme.textMuted}`}>{CARE_OFFERING.positioning}</span>
+            </a>
           </div>
 
-          <div className={`p-6 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}>
-            <div className="w-10 h-10 rounded border border-zinc-700/50 flex items-center justify-center mb-6">
-              <Code size={20} className={activeTheme.highlight} />
+          {/* Websites */}
+          <div id="websites" role="tabpanel" aria-labelledby="offering-tab-websites" hidden={offeringTab !== 'websites'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+            <h3 className="sr-only">Websites</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {WEBSITE_PACKAGES.map((pkg) => renderPackageCard(pkg, 'websites'))}
             </div>
-            <h3 className="text-lg font-bold mb-2">2. Engineering</h3>
-            <p className={`text-sm leading-relaxed ${activeTheme.textMuted}`}>
-              Fast, well-built websites and web apps, coded from scratch with no page builders and no bloat.
-            </p>
+            <p className={`mt-8 text-sm ${activeTheme.textMuted}`}>{WEBSITE_FOOTER}</p>
           </div>
 
-          <div className={`p-6 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}>
-            <div className="w-10 h-10 rounded border border-zinc-700/50 flex items-center justify-center mb-6">
-              <ShieldCheck size={20} className={activeTheme.highlight} />
+          {/* Booking & Integrations: full package cards plus tools footer */}
+          <div id="booking-integrations" role="tabpanel" aria-labelledby="offering-tab-booking-integrations" hidden={offeringTab !== 'booking-integrations'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+            <h3 className="sr-only">Booking & Integrations</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {BOOKING_PACKAGES.map((pkg) => renderPackageCard(pkg, 'booking-integrations'))}
             </div>
-            <h3 className="text-lg font-bold mb-2">3. Site Maintenance</h3>
-            <p className={`text-sm leading-relaxed ${activeTheme.textMuted}`}>
-              Updates, security checks and speed tuning after launch, so your site stays reliable without you having to think about it.
-            </p>
+            <div className={`mt-8 p-6 rounded-xl border ${activeTheme.border}`}>
+              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-xs">
+                {BOOKING_FOOTER.groups.map((group) => (
+                  <div key={group.label}>
+                    <dt className="inline font-bold">{group.label}</dt>{' '}
+                    <dd className={`inline ${activeTheme.textMuted}`}>{group.tools}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className={`mt-4 text-xs ${activeTheme.textMuted}`}>{BOOKING_FOOTER.note}</p>
+            </div>
+          </div>
+
+          {/* Business Tools: full package cards, tools footer and a link to Web Apps */}
+          <div id="business-tools" role="tabpanel" aria-labelledby="offering-tab-business-tools" hidden={offeringTab !== 'business-tools'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+            <h3 className="sr-only">Business Tools</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {BUSINESS_PACKAGES.map((pkg) => renderPackageCard(pkg, 'business-tools'))}
+            </div>
+            <div className={`mt-8 p-6 rounded-xl border ${activeTheme.border}`}>
+              <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-3 text-xs">
+                {BUSINESS_TOOLS_FOOTER.groups.map((group) => (
+                  <div key={group.label}>
+                    <dt className="inline font-bold">{group.label}</dt>{' '}
+                    <dd className={`inline ${activeTheme.textMuted}`}>{group.tools}</dd>
+                  </div>
+                ))}
+              </dl>
+              {/* Bottom row: note on the left, Web Apps link at the bottom right */}
+              <div className="mt-4 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+                <p className={`text-xs ${activeTheme.textMuted}`}>{BUSINESS_TOOLS_FOOTER.note}</p>
+                <p className="text-[12px] text-right">
+                  {BUSINESS_TOOLS_WEB_APPS_LINK.lead}{' '}
+                  <a
+                    href="#web-apps"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.history.replaceState(null, '', '#web-apps');
+                      showOffering('web-apps', { focusTab: true });
+                    }}
+                    className={`font-medium underline underline-offset-4 hover:opacity-70 rounded ${activeTheme.highlight} ${FOCUS_RING}`}
+                  >
+                    {BUSINESS_TOOLS_WEB_APPS_LINK.link}
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Web Apps */}
+          <div id="web-apps" role="tabpanel" aria-labelledby="offering-tab-web-apps" hidden={offeringTab !== 'web-apps'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+            <h3 className="sr-only">Web Apps</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+              {WEB_APP_PACKAGES.map((pkg) => renderPackageCard(pkg, 'web-apps'))}
+            </div>
+            <ul className={`mt-8 p-6 rounded-xl border grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 ${activeTheme.border}`}>
+              {WEB_APP_EXAMPLES.map((example) => (
+                <li key={example} className="flex items-start gap-2 text-xs">
+                  <ChevronRight size={14} aria-hidden="true" className={`shrink-0 mt-0.5 ${activeTheme.highlight}`} />
+                  <span className={activeTheme.textMuted}>{example}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
 {/* Retainer Plans Grid */}
-<div className="mb-8">
-  <h3 className="text-xl font-bold mb-2">Site Maintenance Care Plans</h3>
+<div ref={carePlansRef} id="care-plans" tabIndex={-1} className="mb-8 scroll-mt-20 md:scroll-mt-28 xl:scroll-mt-20 focus:outline-none">
+  <h3 className="text-3xl sm:text-4xl font-bold mb-2">Site Maintenance Care Plans</h3>
   <p className={`text-sm ${activeTheme.textMuted} mb-8`}>
     Ongoing care for custom-built websites, WordPress sites and websites built by Iris & Oak.
   </p>
@@ -821,7 +1625,7 @@ ${clientDetails.details || 'No additional details provided.'}
   </div>
 
   {/* Three monthly care tiers */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
     {CARE_PLANS.filter((plan) => plan.type === 'monthly').map((plan) => (
       <div
         key={plan.id}
@@ -872,12 +1676,8 @@ ${clientDetails.details || 'No additional details provided.'}
         </div>
 
         <a
-          href="#estimator"
-          onClick={() =>
-            setRetainerInterest(
-              `${plan.name} (${plan.price}/month or ${plan.annualPrice}/year)`
-            )
-          }
+          href="#contact"
+          onClick={() => preselectEnquiry({ need: CARE_OFFERING.id, pkg: `${plan.name} care plan (${plan.price}/month)` })}
           className={`w-full py-2.5 text-center rounded text-xs font-medium transition-all ${
             plan.popular
               ? activeTheme.accent
@@ -922,8 +1722,8 @@ ${clientDetails.details || 'No additional details provided.'}
           <div className="text-3xl font-bold font-mono">{plan.price}</div>
           <div className={`text-xs mb-4 ${activeTheme.textMuted}`}>one-off</div>
           <a
-            href="#estimator"
-            onClick={() => setRetainerInterest(`${plan.name} (${plan.price} one-off)`)}
+            href="#contact"
+            onClick={() => preselectEnquiry({ need: CARE_OFFERING.id, pkg: `${plan.name} (${plan.price} one-off)` })}
             className={`inline-block px-5 py-2.5 rounded text-xs font-medium border ${activeTheme.border} hover:bg-zinc-800/30`}
           >
             Ask about a check-up
@@ -933,16 +1733,21 @@ ${clientDetails.details || 'No additional details provided.'}
     </div>
   ))}
 </div>
+        {/* Transition marker centred on the section's bottom border (+0.5px = half the 1px border) */}
+        <span aria-hidden="true" className="pointer-events-none absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[calc(50%+0.5px)] flex items-center justify-center w-3 h-3">
+          <span className="absolute inset-0 rounded-full border border-emerald-500/60 animate-transition-ring motion-reduce:animate-none motion-reduce:opacity-40" />
+          <span className="relative w-1.5 h-1.5 rounded-full bg-emerald-500/70" />
+        </span>
       </section>
 
       {/* SECTION 3: TECH STACK & PHILOSOPHY */}
-      <section id="engineering" className="scroll-mt-16 py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
+      <section id="engineering" className="scroll-mt-16 md:scroll-mt-28 xl:scroll-mt-16 py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Engineering Principles</div>
-            <h2 className="text-3xl font-bold tracking-tight mb-6">Modern Stack for Speed, Longevity & Zero Bloat</h2>
+            <h2 className="text-3xl font-bold tracking-tight mb-6">Modern tools, chosen for each project · Fast today, easy to maintain tomorrow</h2>
             <p className={`text-base leading-relaxed mb-6 ${activeTheme.textMuted}`}>
-              We avoid heavy monolithic site builders in favor of composable, ultra-fast tech stacks. Every site is engineered to deliver 95+ Lighthouse scores and smooth, modern user interactions.
+              We build with modern, lightweight tools chosen for each project, with a focus on speed, accessibility and code that’s easy to maintain. Every site is tested on real devices and checked for performance before launch.
             </p>
 
             <div className="space-y-4">
@@ -951,8 +1756,8 @@ ${clientDetails.details || 'No additional details provided.'}
                   <Zap size={16} />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold">Sub-Second Load Performance</h4>
-                  <p className={`text-xs ${activeTheme.textMuted}`}>Optimized assets, minimal JS payload, and global CDN distribution.</p>
+                  <h3 className="text-sm font-bold">Fast by default</h3>
+                  <p className={`text-xs ${activeTheme.textMuted}`}>Optimised images, lightweight code and modern hosting.</p>
                 </div>
               </div>
 
@@ -961,8 +1766,8 @@ ${clientDetails.details || 'No additional details provided.'}
                   <Layers size={16} />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold">Headless Content Flexibility</h4>
-                  <p className={`text-xs ${activeTheme.textMuted}`}>Empower teams with dynamic CMS tools like Sanity or Dato CMS without risking site layout breaks.</p>
+                  <h3 className="text-sm font-bold">Easy to update</h3>
+                  <p className={`text-xs ${activeTheme.textMuted}`}>Content you can edit yourself, built so changes don’t break your layout.</p>
                 </div>
               </div>
             </div>
@@ -970,10 +1775,16 @@ ${clientDetails.details || 'No additional details provided.'}
 
           {/* Stack Pills */}
           <div className={`p-6 sm:p-8 rounded-xl border ${activeTheme.border} ${activeTheme.cardBg}`}>
-            <h3 className="text-xs font-mono uppercase tracking-wider mb-6 text-zinc-400 font-bold">Curated Tech Arsenal</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {TECH_STACK.map((item) => (
-                <div key={item.name} className={`p-3 rounded border ${activeTheme.border} bg-zinc-900/30`}>
+            <h3 className={`text-xs font-mono uppercase tracking-wider mb-6 font-bold ${activeTheme.textMuted}`}>TOOLS WE OFTEN USE</h3>
+            <div ref={toolsGridRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {TECH_STACK.map((item, index) => (
+                <div
+                  key={item.name}
+                  style={toolsRevealDone ? undefined : { transitionDelay: `${index * 70}ms` }}
+                  className={`p-3 rounded border ${activeTheme.border} bg-zinc-900/30 transition-[opacity,transform,box-shadow] duration-500 ease-out hover:-translate-y-0.5 hover:shadow-lg ${
+                    toolsRevealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+                  } motion-reduce:opacity-100 motion-reduce:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
+                >
                   <div className="font-bold text-sm">{item.name}</div>
                   <div className={`text-xs ${activeTheme.textMuted}`}>{item.role}</div>
                   <span className={`inline-block mt-2 text-[9px] font-mono uppercase px-1.5 py-0.5 rounded border ${activeTheme.badge}`}>
@@ -984,306 +1795,413 @@ ${clientDetails.details || 'No additional details provided.'}
             </div>
           </div>
         </div>
+
+        {/* Process: Design → Engineering → Site Maintenance */}
+        <div className="mt-16">
+          <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>How a project comes together</div>
+          <h3 className="text-2xl sm:text-3xl font-bold tracking-tight mb-8">From first idea to long-term care</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className={`relative p-6 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}>
+              <div className="w-10 h-10 rounded border border-zinc-700/50 flex items-center justify-center mb-6">
+                <Layout size={20} className={activeTheme.highlight} />
+              </div>
+              <h3 className="text-lg font-bold mb-2">1. Design</h3>
+              <p className={`text-sm leading-relaxed ${activeTheme.textMuted}`}>
+                Clear layouts, considered typography and a consistent look, shaped around your business and your customers.
+              </p>
+              {renderProcessConnector(0)}
+            </div>
+
+            <div className={`relative p-6 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}>
+              <div className="w-10 h-10 rounded border border-zinc-700/50 flex items-center justify-center mb-6">
+                <Code size={20} className={activeTheme.highlight} />
+              </div>
+              <h3 className="text-lg font-bold mb-2">2. Engineering</h3>
+              <p className={`text-sm leading-relaxed ${activeTheme.textMuted}`}>
+                Fast, well-built websites and web apps, coded from scratch with no page builders and no bloat.
+              </p>
+              {renderProcessConnector(1)}
+            </div>
+
+            <div className={`relative p-6 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}>
+              <div className="w-10 h-10 rounded border border-zinc-700/50 flex items-center justify-center mb-6">
+                <ShieldCheck size={20} className={activeTheme.highlight} />
+              </div>
+              <h3 className="text-lg font-bold mb-2">3. Site Maintenance</h3>
+              <p className={`text-sm leading-relaxed ${activeTheme.textMuted}`}>
+                Updates, security checks and speed tuning after launch, so your site stays reliable without you having to think about it.
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* SECTION 4: INTERACTIVE PROJECT ESTIMATOR & INQUIRY FORM */}
-      <section id="estimator" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* SECTION 4: ENQUIRY FORM */}
+      <section id="contact" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto text-center mb-12">
-          <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Project Estimator</div>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">Estimate Your Studio Scope</h2>
+          <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Enquire</div>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">Plan your project</h2>
           <p className={`text-sm sm:text-base ${activeTheme.textMuted}`}>
-            Select your required deliverables and target timeline to generate a customized project brief for our team.
+            Answer a few quick questions and we’ll come back with a clear plan and price, usually within two working days.
           </p>
         </div>
 
-        <div className={`max-w-4xl mx-auto p-6 sm:p-10 rounded-xl border shadow-xl ${activeTheme.cardBg} ${activeTheme.border}`}>
-          
-          {/* Step Progress Bar */}
-          <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800/40">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center gap-2">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold ${
-                  estimatorStep === step 
-                    ? activeTheme.accent 
-                    : estimatorStep > step 
-                      ? 'bg-emerald-500 text-black' 
-                      : 'bg-zinc-800 text-zinc-400'
-                }`}>
-                  {estimatorStep > step ? '✓' : step}
-                </span>
-                <span className={`text-xs font-mono hidden sm:inline ${estimatorStep === step ? 'font-bold' : activeTheme.textMuted}`}>
-                  {step === 1 ? '1. Scope & Deliverables' : step === 2 ? '2. Budget & Timeline' : '3. Final Details'}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {!formSubmitted ? (
-            <div>
-              {/* STEP 1: SCOPE SELECTOR */}
-              {estimatorStep === 1 && (
-                <div className="space-y-6">
-                  <h3 className="text-lg font-bold">Select Required Scope Items:</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {[
-                      { title: 'Design', desc: 'UI/UX Design, Design System, Wireframing' },
-                      { title: 'Development', desc: 'Custom Next.js/Astro Frontend & Headless Integration' },
-                      { title: 'Brand System', desc: 'Visual Identity, Typography, Color Palette & Assets' },
-                      { title: 'Maintenance Strategy', desc: 'Continuous Site Care & Security SLA Strategy' }
-                    ].map((item) => {
-                      const isSelected = projectScope.includes(item.title);
-                      return (
-                        <div
-                          key={item.title}
-                          onClick={() => toggleScopeOption(item.title)}
-                          className={`p-4 rounded border cursor-pointer transition-all ${
-                            isSelected 
-                              ? 'border-emerald-500 bg-emerald-500/10' 
-                              : `${activeTheme.border} hover:border-zinc-500`
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-sm">{item.title}</span>
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-700'}`}>
-                              {isSelected && <Check size={12} className="text-black" />}
-                            </div>
-                          </div>
-                          <p className={`text-xs ${activeTheme.textMuted}`}>{item.desc}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="pt-6 border-t border-zinc-800/40 flex justify-between items-center">
-                    <div className="text-xs font-mono">
-                      Selected Scope: <span className="text-emerald-400">{projectScope.length} items</span>
-                    </div>
-                    <button
-                      disabled={projectScope.length === 0}
-                      onClick={() => setEstimatorStep(2)}
-                      className={`px-5 py-2.5 text-xs font-medium rounded transition-all ${
-                        projectScope.length > 0 ? activeTheme.accent : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                      }`}
-                    >
-                      Continue to Budget & Timeline →
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 2: BUDGET & TIMELINE */}
-              {estimatorStep === 2 && (
-                <div className="space-y-8">
-                  <div>
-                    <h3 className="text-sm font-mono uppercase tracking-wider mb-3 font-bold">Target Investment Range</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {['< $5k', '$5k - $10k', '$10k - $20k', '$20k+'].map((range) => (
-                        <button
-                          key={range}
-                          onClick={() => setBudgetRange(range)}
-                          className={`p-3 text-xs font-mono rounded border transition-all ${
-                            budgetRange === range ? activeTheme.accent : `${activeTheme.border} hover:border-zinc-500`
-                          }`}
-                        >
-                          {range}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-mono uppercase tracking-wider mb-3 font-bold">Target Launch Timeline</h3>
-                    <div className="grid grid-cols-3 gap-3">
-                      {['2-3 Weeks', '4-6 Weeks', 'Flexible / Ongoing'].map((time) => (
-                        <button
-                          key={time}
-                          onClick={() => setTimeline(time)}
-                          className={`p-3 text-xs font-mono rounded border transition-all ${
-                            timeline === time ? activeTheme.accent : `${activeTheme.border} hover:border-zinc-500`
-                          }`}
-                        >
-                          {time}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-mono uppercase tracking-wider mb-3 font-bold">Interested in Monthly Care Plan?</h3>
-                    <select
-                      value={retainerInterest}
-                      onChange={(e) => setRetainerInterest(e.target.value)}
-                      className={`w-full p-3 rounded text-xs font-mono border ${activeTheme.border} ${activeTheme.bg} ${activeTheme.text}`}
-                    >
-                      <option value="None">No Retainer Required</option>
-                      <option value="Standard Care ($650/mo)">Standard Care ($650/mo)</option>
-                      <option value="Growth Care ($1.85k/mo)">Growth Care ($1.85k/mo)</option>
-                      <option value="Embedded Partner ($3.8k/mo)">Embedded Partner ($3.8k/mo)</option>
-                    </select>
-                  </div>
-
-                  {/* Calculated Estimate Box */}
-                  <div className="p-4 rounded border border-dashed border-emerald-500/40 bg-emerald-500/5 flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-mono text-emerald-400 uppercase">Estimated Scope Investment</div>
-                      <div className="text-2xl font-bold font-mono">~${estimatedTotal.toLocaleString()}</div>
-                    </div>
-                    <div className={`text-[11px] text-right ${activeTheme.textMuted}`}>
-                      Non-binding estimate <br />
-                      Subject to final discovery
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-zinc-800/40 flex justify-between">
-                    <button
-                      onClick={() => setEstimatorStep(1)}
-                      className={`px-4 py-2 text-xs font-medium rounded border ${activeTheme.border}`}
-                    >
-                      ← Back
-                    </button>
-                    <button
-                      onClick={() => setEstimatorStep(3)}
-                      className={`px-5 py-2.5 text-xs font-medium rounded ${activeTheme.accent}`}
-                    >
-                      Continue to Details →
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 3: CONTACT & BRIEF GENERATION */}
-              {estimatorStep === 3 && (
-                <div className="space-y-6">
-                  <h3 className="text-lg font-bold">Contact & Project Specifics</h3>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-mono mb-1">Your Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={clientDetails.name}
-                        onChange={(e) => setClientDetails({ ...clientDetails, name: e.target.value })}
-                        placeholder="Alex Mercer"
-                        className={`w-full p-2.5 rounded text-xs border ${activeTheme.border} ${activeTheme.bg}`}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-mono mb-1">Email Address *</label>
-                      <input
-                        type="email"
-                        required
-                        value={clientDetails.email}
-                        onChange={(e) => setClientDetails({ ...clientDetails, email: e.target.value })}
-                        placeholder="alex@studio.com"
-                        className={`w-full p-2.5 rounded text-xs border ${activeTheme.border} ${activeTheme.bg}`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono mb-1">Company / Project Name</label>
-                    <input
-                      type="text"
-                      value={clientDetails.company}
-                      onChange={(e) => setClientDetails({ ...clientDetails, company: e.target.value })}
-                      placeholder="Mercer Creative"
-                      className={`w-full p-2.5 rounded text-xs border ${activeTheme.border} ${activeTheme.bg}`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono mb-1">Project Goals & Overview</label>
-                    <textarea
-                      rows={4}
-                      value={clientDetails.details}
-                      onChange={(e) => setClientDetails({ ...clientDetails, details: e.target.value })}
-                      placeholder="Briefly describe what you're looking to build or refine..."
-                      className={`w-full p-2.5 rounded text-xs border ${activeTheme.border} ${activeTheme.bg}`}
-                    />
-                  </div>
-
-                  <div className="pt-6 border-t border-zinc-800/40 flex justify-between items-center">
-                    <button
-                      onClick={() => setEstimatorStep(2)}
-                      className={`px-4 py-2 text-xs font-medium rounded border ${activeTheme.border}`}
-                    >
-                      ← Back
-                    </button>
-                    <button
-                      disabled={!clientDetails.name || !clientDetails.email}
-                      onClick={() => setFormSubmitted(true)}
-                      className={`px-6 py-2.5 text-xs font-medium rounded flex items-center gap-2 ${
-                        clientDetails.name && clientDetails.email ? activeTheme.accent : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                      }`}
-                    >
-                      <Send size={14} />
-                      <span>Submit Inquiry Brief</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+        {/* Below lg: the form alone. From lg: form on the left, decorative orbit on the right. */}
+        <div className="max-w-4xl lg:max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(0,1fr)_32rem] gap-8 xl:gap-12 items-start">
+        <div className={`p-6 sm:p-10 rounded-xl border shadow-xl ${activeTheme.cardBg} ${activeTheme.border}`}>
+          {submitStatus === 'sent' ? (
+            /* Shown only after the server confirms the enquiry was received */
+            <div role="status" className="py-8 flex items-center gap-3">
+              <CheckCircle2 size={24} aria-hidden="true" className={successText} />
+              <h3 ref={enquirySentRef} tabIndex={-1} className="text-xl font-bold focus:outline-none">
+                Thanks, we’ll be in touch within two working days.
+              </h3>
             </div>
           ) : (
-            /* SUBMITTED CONFIRMATION & FORMATTED BRIEF OUTPUT */
-            <div className="py-8 space-y-6">
-              <div className="flex items-center gap-3 text-emerald-400 mb-2">
-                <CheckCircle2 size={24} />
-                <h3 className="text-xl font-bold">Inquiry Brief Compiled!</h3>
-              </div>
-              <p className={`text-sm ${activeTheme.textMuted}`}>
-                Your customized studio brief has been generated below. You can copy this summary directly or send it to your email.
-              </p>
+            <form noValidate onSubmit={handleEnquirySubmit} aria-busy={submitStatus === 'sending'} className="relative space-y-6">
+              <p className={`text-xs ${activeTheme.textMuted}`}>Fields marked * are required.</p>
 
-              <div className="relative p-4 rounded bg-zinc-950 font-mono text-xs text-zinc-300 border border-zinc-800 whitespace-pre-wrap overflow-x-auto">
-                {generateBriefText()}
-                <button
-                  onClick={handleCopyBrief}
-                  className="absolute top-3 right-3 px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white flex items-center gap-1.5 text-[11px]"
+              {submitAttempted && Object.keys(formErrors).length > 0 && (
+                <div
+                  ref={errorSummaryRef}
+                  tabIndex={-1}
+                  aria-labelledby="enquiry-error-summary-title"
+                  className="p-4 rounded border border-red-500/60 bg-red-500/10 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                 >
-                  {copiedBrief ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                  <span>{copiedBrief ? 'Copied!' : 'Copy Brief'}</span>
+                  <h3 id="enquiry-error-summary-title" className={`text-sm font-bold mb-2 ${errorText}`}>There’s a problem</h3>
+                  <ul className="space-y-1 text-xs">
+                    {['name', 'email'].filter((field) => formErrors[field]).map((field) => (
+                      <li key={field}>
+                        <a
+                          href={`#enquiry-${field}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            document.getElementById(`enquiry-${field}`)?.focus();
+                          }}
+                          className={`underline underline-offset-4 ${errorText} ${FOCUS_RING}`}
+                        >
+                          {formErrors[field]}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {packageInterest && (
+                <div className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded border ${activeTheme.border}`}>
+                  <p className="text-xs">
+                    Package you asked about: <strong>{packageInterest}</strong>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setPackageInterest('')}
+                    className={`text-xs underline underline-offset-4 hover:opacity-70 rounded ${FOCUS_RING}`}
+                  >
+                    Remove<span className="sr-only"> {packageInterest}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Name and Email side by side from sm; business name / website on its own full-width row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { field: 'name', label: 'Name', type: 'text', autoComplete: 'name', required: true },
+                  { field: 'email', label: 'Email', type: 'email', autoComplete: 'email', required: true },
+                  { field: 'business', label: 'Business name or current website', type: 'text', autoComplete: 'organization', required: false, wide: true }
+                ].map(({ field, label, type, autoComplete, required, wide }) => (
+                  <div key={field} className={wide ? 'sm:col-span-2' : undefined}>
+                    <label htmlFor={`enquiry-${field}`} className="block text-xs font-mono mb-1">
+                      {label}
+                      {required ? <span aria-hidden="true"> *</span> : <span className={activeTheme.textMuted}> (optional)</span>}
+                    </label>
+                    <input
+                      id={`enquiry-${field}`}
+                      name={field}
+                      type={type}
+                      autoComplete={autoComplete}
+                      required={required}
+                      aria-invalid={formErrors[field] ? 'true' : undefined}
+                      aria-describedby={formErrors[field] ? `enquiry-${field}-error` : undefined}
+                      value={enquiry[field]}
+                      onChange={(e) => updateEnquiry(field, e.target.value)}
+                      className={`w-full p-2.5 rounded text-xs border ${formErrors[field] ? 'border-red-500' : activeTheme.border} ${activeTheme.bg}`}
+                    />
+                    {formErrors[field] && (
+                      <p id={`enquiry-${field}-error`} className={`text-xs mt-1 ${errorText}`}>
+                        <span className="sr-only">Error: </span>{formErrors[field]}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* 4. What do you need help with? (checkbox chips: choose any) */}
+              <fieldset>
+                <legend className="text-xs font-mono mb-1">What do you need help with?</legend>
+                <p id="enquiry-needs-hint" className={`text-xs mb-3 ${activeTheme.textMuted}`}>Choose all that apply.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {ENQUIRY_NEEDS.map((need) => {
+                    const checked = enquiryNeeds.includes(need.id);
+                    return (
+                      <label
+                        key={need.id}
+                        className={`relative flex flex-col gap-1 p-4 rounded border cursor-pointer transition-all has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-emerald-400 ${
+                          checked ? 'border-emerald-500 bg-emerald-500/10' : `${activeTheme.border} hover:border-zinc-500`
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          name="needs"
+                          value={need.label}
+                          checked={checked}
+                          onChange={() => toggleEnquiryNeed(need.id)}
+                          aria-describedby={`enquiry-need-${need.id}-desc enquiry-needs-hint`}
+                          className="sr-only"
+                        />
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-sm">{need.label}</span>
+                          <span aria-hidden="true" className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-700'}`}>
+                            {checked && <Check size={12} className="text-black" />}
+                          </span>
+                        </span>
+                        <span id={`enquiry-need-${need.id}-desc`} className={`text-xs ${activeTheme.textMuted}`}>{need.desc}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
+              {/* 5. Tell us about your project */}
+              <div>
+                <label htmlFor="enquiry-message" className="block text-xs font-mono mb-1">Tell us about your project.</label>
+                <textarea
+                  id="enquiry-message"
+                  name="message"
+                  rows={5}
+                  value={enquiry.message}
+                  onChange={(e) => updateEnquiry('message', e.target.value)}
+                  placeholder="What does your business do, and what would you like your site or tool to help with?"
+                  className={`w-full p-2.5 rounded text-xs border ${activeTheme.border} ${activeTheme.bg}`}
+                />
+              </div>
+
+              {/* 6. Launch timeframe and optional budget: side by side from sm (rows shared via subgrid so
+                  the dropdowns line up when a label wraps), stacked on mobile */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-y-0">
+                <div className="sm:grid sm:grid-rows-subgrid sm:row-span-3">
+                  <label htmlFor="enquiry-launch" className="block self-end text-xs font-mono mb-1">When would you like to launch?</label>
+                  <select
+                    id="enquiry-launch"
+                    name="launch"
+                    value={enquiry.launch}
+                    onChange={(e) => updateEnquiry('launch', e.target.value)}
+                    className={`w-full p-2.5 rounded text-xs border ${activeTheme.border} ${activeTheme.bg} ${activeTheme.text}`}
+                  >
+                    <option value="">Select a timeframe</option>
+                    {ENQUIRY_LAUNCH_OPTIONS.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="sm:grid sm:grid-rows-subgrid sm:row-span-3">
+                  <label htmlFor="enquiry-budget" className="block self-end text-xs font-mono mb-1">
+                    Do you have a budget in mind?<span className={activeTheme.textMuted}> (optional)</span>
+                  </label>
+                  <select
+                    id="enquiry-budget"
+                    name="budget"
+                    aria-describedby="enquiry-budget-hint"
+                    value={enquiry.budget}
+                    onChange={(e) => updateEnquiry('budget', e.target.value)}
+                    className={`w-full p-2.5 rounded text-xs border ${activeTheme.border} ${activeTheme.bg} ${activeTheme.text}`}
+                  >
+                    <option value="">Select a range</option>
+                    {ENQUIRY_BUDGET_OPTIONS.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                  <p id="enquiry-budget-hint" className={`text-xs mt-1 ${activeTheme.textMuted}`}>A preference only, not a quote.</p>
+                </div>
+              </div>
+
+              {/* Honeypot: off-screen, out of the tab order and hidden from assistive technology */}
+              <div aria-hidden="true" className="absolute -left-[10000px] top-auto w-px h-px overflow-hidden">
+                <label htmlFor="enquiry-contact-reference">Leave this field empty</label>
+                <input
+                  id="enquiry-contact-reference"
+                  name="contact_reference"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                />
+              </div>
+
+              {submitStatus === 'error' && (
+                <p role="alert" className={`text-sm p-3 rounded border border-red-500/60 bg-red-500/10 ${errorText}`}>
+                  Sorry, we couldn’t send your enquiry. Your answers are still here, so please try again.
+                </p>
+              )}
+
+              <div className="pt-6 border-t border-zinc-800/40 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4">
+                <p className={`text-xs ${activeTheme.textMuted}`}>
+                  <a href="/privacy" className={`underline underline-offset-4 hover:opacity-70 rounded ${FOCUS_RING}`}>
+                    We’ll only use your details to reply to your enquiry.
+                  </a>
+                </p>
+                <button
+                  type="submit"
+                  disabled={submitStatus === 'sending'}
+                  className={`px-6 py-2.5 text-xs font-medium rounded flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait ${activeTheme.accent} ${FOCUS_RING}`}
+                >
+                  {submitStatus === 'sending' ? 'Sending…' : 'Send enquiry'}
                 </button>
               </div>
-
-              <div className="flex gap-4 pt-4">
-                <button
-                  onClick={() => {
-                    setFormSubmitted(false);
-                    setEstimatorStep(1);
-                  }}
-                  aria-label="Reset and create another project brief"
-                  className={`px-4 py-2 text-xs font-medium rounded border ${activeTheme.border}`}
-                >
-                  Create Another Brief
-                </button>
-              </div>
-            </div>
+              <p role="status" className="sr-only">{submitStatus === 'sending' ? 'Sending your enquiry…' : ''}</p>
+            </form>
           )}
         </div>
+
+        {/* Decorative: the hero's orbit on a faint blueprint grid. Hidden below lg; static with reduced motion. */}
+        <div
+          aria-hidden="true"
+          className={`hidden lg:block lg:sticky lg:top-28 relative aspect-[18/13] overflow-hidden rounded-xl border pointer-events-none select-none ${activeTheme.cardBg} ${activeTheme.border} ${activeTheme.highlight}`}
+        >
+          <div
+            className="absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage: 'linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)',
+              backgroundSize: '2rem 2rem'
+            }}
+          />
+          <div className="absolute left-1/2 top-1/2 w-[720px] h-[520px] -translate-x-1/2 -translate-y-1/2 scale-[0.58] xl:scale-[0.71]">
+            {renderOrbitArtwork('enquire-orbit')}
+          </div>
+        </div>
+        </div>
       </section>
+      </main>
 
       {/* FOOTER */}
       <footer className={`py-12 border-t ${activeTheme.border} ${activeTheme.cardBg} transition-colors`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-xs uppercase tracking-wider">{studioName}</span>
-            <span className={`text-[10px] px-2 py-0.5 rounded border ${activeTheme.badge}`}>© {new Date().getFullYear()} Iris &amp; Oak</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-10">
+          {/* Brand */}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-bold text-xs uppercase tracking-wider">{studioName}</span>
+              <span className={`inline-flex items-center gap-1.5 text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${activeTheme.badge}`}>
+                <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                {STUDIO_AVAILABILITY}
+              </span>
+            </div>
+            <p className={`text-xs ${activeTheme.textMuted}`}>
+              Designed, Engineered, Cared for.
+            </p>
+            <span className={`inline-block text-[10px] px-2 py-0.5 rounded border ${activeTheme.badge}`}>© {new Date().getFullYear()} Iris &amp; Oak</span>
           </div>
-          <p className={`text-xs ${activeTheme.textMuted}`}>
-            Built for modern creative developers, designers, and site care specialists.
-          </p>
-          <div className="flex gap-6 text-xs font-mono">
-            <a href="#portfolio" className="hover:underline">Portfolio</a>
-            <a href="#services" className="hover:underline">Studio Offerings</a>
-            <a href="#estimator" className="hover:underline">Estimator</a>
+
+          {/* Studio */}
+          <nav aria-labelledby="footer-studio-heading">
+            <h2 id="footer-studio-heading" className={`text-xs font-mono uppercase tracking-widest mb-3 ${activeTheme.textMuted}`}>Studio</h2>
+            <ul className="space-y-2 text-xs font-mono">
+              <li><a href="#portfolio" className={`hover:underline rounded ${FOCUS_RING}`}>Portfolio</a></li>
+              <li><a href="#services" className={`hover:underline rounded ${FOCUS_RING}`}>Studio Offerings</a></li>
+              <li><a href="#engineering" className={`hover:underline rounded ${FOCUS_RING}`}>Engineering</a></li>
+              <li className="flex flex-wrap items-center gap-2">
+                <button
+                  ref={partnershipOpenerRef}
+                  type="button"
+                  aria-haspopup="dialog"
+                  onClick={() => setIsPartnershipOpen(true)}
+                  className={`hover:underline rounded text-left ${FOCUS_RING}`}
+                >
+                  Portfolio Partnership
+                </button>
+                <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border ${activeTheme.badge}`}>
+                  <span className="sr-only">Status: </span>{PARTNERSHIP_STATUS_LABELS[PARTNERSHIP_STATUS]}
+                </span>
+              </li>
+            </ul>
+          </nav>
+
+          {/* Contact */}
+          <div>
+            <h2 className={`text-xs font-mono uppercase tracking-widest mb-3 ${activeTheme.textMuted}`}>Contact</h2>
+            <ul className="space-y-2 text-xs font-mono">
+              <li><a href="#contact" className={`hover:underline rounded ${FOCUS_RING}`}>Enquire</a></li>
+              <li><a href={`mailto:${CONTACT_EMAIL}`} className={`hover:underline rounded break-all ${FOCUS_RING}`}>{CONTACT_EMAIL}</a></li>
+              <li><a href="/privacy" className={`hover:underline rounded ${FOCUS_RING}`}>Privacy</a></li>
+            </ul>
           </div>
         </div>
       </footer>
 
+      {/* PORTFOLIO PARTNERSHIP POPUP */}
+      {isPartnershipOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in motion-reduce:animate-none"
+          // Close on a backdrop click only when the press also started on the backdrop
+          onMouseDown={(e) => { partnershipBackdropPressRef.current = e.target === e.currentTarget; }}
+          onClick={(e) => {
+            if (partnershipBackdropPressRef.current && e.target === e.currentTarget) setIsPartnershipOpen(false);
+          }}
+        >
+          <div
+            ref={partnershipDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="partnership-dialog-title"
+            className={`relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border p-6 md:p-8 shadow-2xl ${activeTheme.bg} ${activeTheme.border} ${activeTheme.text}`}
+          >
+            <button
+              type="button"
+              aria-label="Close Portfolio Partnership details"
+              onClick={() => setIsPartnershipOpen(false)}
+              className={`absolute top-5 right-5 p-2 rounded-full hover:bg-zinc-800/50 transition-colors ${FOCUS_RING}`}
+            >
+              <X size={20} aria-hidden="true" />
+            </button>
+
+            <h2 id="partnership-dialog-title" className="text-2xl font-bold mb-4 pr-10">Portfolio Partnership</h2>
+            <div className={`space-y-4 text-sm leading-relaxed ${activeTheme.textMuted}`}>
+              <p>
+                Each round, we offer a small number of independent businesses a complimentary website in return for featuring the finished project as a case study.
+              </p>
+              <p>
+                <strong className={activeTheme.text}>Current round: {PARTNERSHIP_STATUS_LABELS[PARTNERSHIP_STATUS]}.</strong>
+                {PARTNERSHIP_STATUS !== 'soon' && <> We’re working with <span className="whitespace-nowrap">{PARTNERSHIP_PLACES}</span> local businesses.</>}
+              </p>
+              <p>
+                Want to hear about the next round?{' '}
+                <a
+                  href="#contact"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    preselectEnquiry({ pkg: 'Portfolio Partnership' });
+                    setIsPartnershipOpen(false);
+                    // After the popup closes (and returns focus), move on to the enquiry form
+                    requestAnimationFrame(() => {
+                      window.history.replaceState(null, '', '#contact');
+                      document.getElementById('contact')?.scrollIntoView();
+                      document.getElementById('enquiry-name')?.focus({ preventScroll: true });
+                    });
+                  }}
+                  className={`font-medium underline underline-offset-4 hover:opacity-70 rounded ${activeTheme.highlight} ${FOCUS_RING}`}
+                >
+                  Get in touch
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DYNAMIC CONFIGURATOR DRAWER */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-fade-in motion-reduce:animate-none">
           <div
             ref={drawerRef}
             role="dialog"
