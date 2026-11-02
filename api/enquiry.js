@@ -121,11 +121,11 @@ export default async function handler(req, res) {
       from: ENQUIRY_FROM_EMAIL,
       to: [enquiry.email],
       reply_to: ENQUIRY_TO_EMAIL,
-      subject: 'We’ve received your enquiry',
+      subject: 'I’ve received your enquiry',
       text: [
         'Thanks for getting in touch with Iris & Oak.',
         '',
-        'We’ve received your enquiry and will be in touch within two working days.',
+        'I’ve received your enquiry and will be in touch within two working days.',
         '',
         'If you didn’t send this enquiry, you can ignore this email.',
         '',

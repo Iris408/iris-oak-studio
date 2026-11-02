@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Sliders, 
   ArrowUpRight, 
@@ -12,7 +12,6 @@ import {
   ChevronRight, 
   X, 
   Check, 
-  Maximize2, 
   Clock,
   Activity,
   ChevronDown
@@ -148,16 +147,23 @@ function useMediaQuery(query) {
 
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-const PORTFOLIO_FILTERS = ['All', 'Web Dev', 'Product Builds', 'Systems', 'Care Retainers'];
+// Portfolio groups: work for clients is kept separate from my own product builds.
+const PORTFOLIO_GROUPS = [
+  { kind: 'client', title: 'Client work' },
+  { kind: 'product', title: 'Portfolio builds' }
+];
 
-// Portfolio projects. `category` shows as the left pill (and drives the filters);
-// `status` shows as the right pill.
+// Portfolio projects. `kind` picks the group (PORTFOLIO_GROUPS); `eyebrow` reads "what it is · who it's for";
+// `status` (Demo / Prototype) shows under the title. `liveUrl` (client sites) and `demoUrl` (portfolio builds)
+// add an external link when set. Only add client projects once they're complete and the client has approved featuring them.
 const SAMPLE_PROJECTS = [
   {
     id: 'kawari-company',
+    kind: 'client',
     title: 'Kawari Company',
+    eyebrow: 'Client website · Safeguarding consultancy',
     status: '',
-    category: 'Web Dev',
+    liveUrl: 'https://kawaricompany.com',
     client: '',
     summary: 'A calm, minimalist first website built for a safeguarding consultancy with more than 25 years of experience: clear, credible and easy to get in touch.',
     tags: ['Next.js', 'TypeScript', 'CSS', 'React'],
@@ -166,14 +172,17 @@ const SAMPLE_PROJECTS = [
       heading: 'Project scope & deliverables',
       text: 'A clean, minimalist website that clearly presents the company’s expertise, services and gives prospective clients a simple way to get in touch.'
     },
-    technicalExecution: 'Designed and built in Webflow, with a responsive layout that adapts to different screen sizes.',
-    image: '/images/kawari-company/homepage.png'
+    technicalExecution: 'Built with Next.js and React, with a responsive layout that adapts to different screen sizes.',
+    image: '/images/kawari-company/homepage.png',
+    imageAlt: 'Kawari Company homepage: the headline ‘Expert advice. Impacting practice.’ beside a photo of a sunlit stone staircase.'
   },
   {
     id: 'bloom',
+    kind: 'product',
     title: 'Bloom',
+    eyebrow: 'Portfolio build · Wellness & routines app',
     status: 'Demo',
-    category: 'Product Builds',
+    demoUrl: 'https://www.bloomapp.uk',
     client: '',
     summary: 'A calm visual planner for everyday routines, designed for neurodivergent users, with no streaks, pressure or falling behind.',
     tags: ['JavaScript', 'Vite', 'FastAPI', 'PostgreSQL', 'Python'],
@@ -187,13 +196,16 @@ const SAMPLE_PROJECTS = [
       ]
     },
     technicalExecution: 'Built with a JavaScript and Vite front end, a FastAPI back end and a PostgreSQL database, and set up as a progressive web app (PWA).',
-    image: '/images/bloom/overview.png'
+    image: '/images/bloom/overview.png',
+    imageAlt: 'Bloom landing page: the headline ‘A calmer way to build your day.’ beside a phone showing a day of gentle routines.'
   },
   {
     id: 'partspilot',
+    kind: 'product',
     title: 'PartsPilot',
-    status: 'Prototype',
-    category: 'Product Builds',
+    eyebrow: 'Portfolio build · Inventory management',
+    status: 'Demo',
+    demoUrl: 'https://www.partspilot.uk',
     client: '',
     summary: 'Automotive inventory management platform for stock tracking, low-stock alerts and clear reporting for teams, all in one place.',
     tags: ['React', 'TypeScript', 'FastAPI', 'PostgreSQL', 'Docker'],
@@ -207,13 +219,16 @@ const SAMPLE_PROJECTS = [
       ]
     },
     technicalExecution: 'Built with a React and TypeScript front end, a FastAPI back end and a PostgreSQL database, with Docker used to containerise the application.',
-    image: '/images/partspilot/dashboard.png'
+    image: '/images/partspilot/dashboard.png',
+    imageAlt: 'PartsPilot landing page: the headline ‘Smart inventory. Stronger business.’ beside an inventory dashboard with stock figures and a trend chart.'
   },
   {
     id: 'accesshub',
+    kind: 'product',
     title: 'AccessHub',
-    status: 'Prototype',
-    category: 'Systems',
+    eyebrow: 'Portfolio build · Access management system',
+    status: 'Demo',
+    demoUrl: 'https://accesshub-iris408.vercel.app',
     client: '',
     summary: 'One place to manage people, roles and access requests, so teams always know who can see what. Admins, managers and auditors each get the right level of access.',
     tags: ['React', 'TypeScript', 'FastAPI', 'PostgreSQL', 'RBAC'],
@@ -227,7 +242,8 @@ const SAMPLE_PROJECTS = [
       ]
     },
     technicalExecution: 'Built with a React and TypeScript front end, a FastAPI back end and a PostgreSQL database, using role-based access control (RBAC) to manage what each user can see and do.',
-    image: '/images/accesshub/dashboard.png'
+    image: '/images/accesshub/dashboard.png',
+    imageAlt: 'AccessHub sign-in page: the headline ‘A clearer view of who has access.’ above a diagram of admin, manager and viewer/auditor roles, beside a sign-in form.'
   }
 ];
 
@@ -316,17 +332,51 @@ const CARE_PLANS = [
   }
 ];
 
-const TECH_STACK = [
-  { name: 'React', role: 'Interactive User Interfaces', category: 'Engineering' },
-  { name: 'Next.js', role: 'Full-Stack Web Applications', category: 'Engineering' },
-  { name: 'TypeScript', role: 'Typed JavaScript Development', category: 'Engineering' },
-  { name: 'Astro', role: 'Content-Focused Websites', category: 'Engineering' },
-  { name: 'Tailwind CSS', role: 'Utility-First Styling', category: 'Design & Code' },
-  { name: 'Framer Motion', role: 'Interface Animation', category: 'Design & Code' },
-  { name: 'FastAPI', role: 'Python API Development', category: 'Engineering' },
-  { name: 'PostgreSQL', role: 'Relational Data Storage', category: 'Infrastructure' },
-  { name: 'Docker', role: 'Containerised Development', category: 'Infrastructure' },
-  { name: 'Vercel', role: 'Frontend Deployment', category: 'Infrastructure' }
+// Tools I often use, grouped by what they do for the client
+const TOOL_GROUPS = [
+  {
+    title: 'What you see',
+    tools: [
+      { name: 'React', role: 'Interactive interfaces' },
+      { name: 'Next.js', role: 'Fast, search-friendly websites' },
+      { name: 'TypeScript', role: 'Safer code for larger builds' },
+      { name: 'JavaScript', role: 'Interactive features' },
+      { name: 'Tailwind CSS', role: 'Consistent, responsive styling' },
+      { name: 'Vite', role: 'Fast front-end builds' },
+      { name: 'Astro', role: 'Content-focused websites' }
+    ]
+  },
+  {
+    title: 'Behind the scenes',
+    tools: [
+      { name: 'Python', role: 'Back-end logic and automation' },
+      { name: 'FastAPI', role: 'APIs that power apps' },
+      { name: 'Go', role: 'Fast back-end services' },
+      { name: 'Node.js', role: 'Serverless functions' },
+      { name: 'Resend', role: 'Reliable transactional email' }
+    ]
+  },
+  {
+    title: 'Your data',
+    tools: [
+      { name: 'PostgreSQL', role: 'Reliable relational database' },
+      { name: 'Role-based access control', role: 'Who can see and change what' },
+      { name: 'Power BI', role: 'Reporting dashboards' }
+    ]
+  },
+  {
+    title: 'Running & hosting',
+    tools: [
+      { name: 'Vercel', role: 'Hosting and deployments' },
+      { name: 'Render', role: 'App and API hosting' },
+      { name: 'Railway', role: 'App and database hosting' },
+      { name: 'Docker', role: 'Consistent environments' },
+      { name: 'GitHub Actions', role: 'Automated testing and deployment' },
+      { name: 'AWS', role: 'Cloud infrastructure' },
+      { name: 'Squarespace', role: 'Site-builder websites' },
+      { name: 'Wix', role: 'Site-builder websites' }
+    ]
+  }
 ];
 
 // --- STUDIO OFFERINGS ---
@@ -689,10 +739,9 @@ const ENQUIRY_NEEDS = [
   { id: 'business-tools', label: 'Business tools', desc: SERVICE_DESCRIPTIONS['business-tools'] },
   { id: 'web-apps', label: 'Web apps', desc: SERVICE_DESCRIPTIONS['web-apps'] },
   { id: 'care-plans', label: 'Site maintenance', desc: SERVICE_DESCRIPTIONS['care-plans'] },
-  { id: 'not-sure', label: 'Not sure yet', desc: 'Tell us what you’re trying to do and we’ll suggest the right fit.' }
+  { id: 'not-sure', label: 'Not sure yet', desc: 'Tell me what you’re trying to do and I’ll suggest the right fit.' }
 ];
 const ENQUIRY_LAUNCH_OPTIONS = ['ASAP', 'Within a month', '1–3 months', 'Flexible'];
-// Optional preference only, never a quote
 const ENQUIRY_BUDGET_OPTIONS = ['Under £1,000', '£1,000–£5,000', '£5,000–£15,000', '£15,000+', 'Not sure yet'];
 const ENQUIRY_ENDPOINT = '/api/enquiry';
 const ENQUIRY_TIMEOUT_MS = 20000;
@@ -729,11 +778,10 @@ export default function App() {
 
   // Studio Details
   const studioName = "IRIS & OAK";
-  const studioTagline = 'We design and build high-precision websites and platforms, and provide ongoing care so you can scale with confidence.';
+  const studioTagline = 'I design and build high-precision websites and platforms, and provide ongoing care so you can scale with confidence.';
   const studioStatus = 'Now Booking Projects for Winter';
 
   // Filtering state
-  const [activeCategory, setActiveCategory] = useState('All');
   const [selectedProject, setSelectedProject] = useState(null);
   
   // Enquiry form
@@ -757,7 +805,7 @@ export default function App() {
   const offeringsMenuButtonRef = useRef(null);
   const carePlansRef = useRef(null);
 
-  // Tools we often use
+  // Tools I often use
   const toolsGridRef = useRef(null);
   const [toolsRevealed, setToolsRevealed] = useState(false);
   const [toolsRevealDone, setToolsRevealDone] = useState(false);
@@ -888,6 +936,27 @@ export default function App() {
     e.preventDefault();
     setOfferingTab(next);
     offeringTabRefs.current[next]?.focus();
+  };
+
+  // Portfolio card and popup actions: client sites open as "View project", portfolio builds as "See how it works"
+  const projectActionLabel = (project) => (project.kind === 'client' ? 'View project' : 'See how it works');
+
+  // "Visit live site ↗" for client sites, "View demo ↗" for portfolio builds; nothing without a URL
+  const renderExternalProjectLink = (project, className = '') => {
+    const href = project.liveUrl || project.demoUrl;
+    if (!href) return null;
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`underline underline-offset-4 hover:opacity-70 rounded ${FOCUS_RING} ${className}`}
+      >
+        {project.liveUrl ? 'Visit live site' : 'View demo'}
+        <span aria-hidden="true"> ↗</span>
+        <span className="sr-only">: {project.title} (opens in a new tab)</span>
+      </a>
+    );
   };
 
   // Package card shared by Websites and Integrations.
@@ -1055,14 +1124,10 @@ export default function App() {
   // Drop the stagger delays once the reveal has played, so hover/focus responds immediately
   useEffect(() => {
     if (!toolsRevealed || toolsRevealDone) return;
-    const timer = setTimeout(() => setToolsRevealDone(true), TECH_STACK.length * 70 + 600);
+    const timer = setTimeout(() => setToolsRevealDone(true), TOOL_GROUPS.length * 70 + 600);
     return () => clearTimeout(timer);
   }, [toolsRevealed, toolsRevealDone]);
 
-  const filteredProjects = useMemo(() => {
-    if (activeCategory === 'All') return SAMPLE_PROJECTS;
-    return SAMPLE_PROJECTS.filter(p => p.category === activeCategory);
-  }, [activeCategory]);
 
   const toggleEnquiryNeed = (id) => {
     setEnquiryNeeds((prev) => (prev.includes(id) ? prev.filter((need) => need !== id) : [...prev, id]));
@@ -1265,127 +1330,106 @@ export default function App() {
         {/* Minimal Metric Bar */}
         <div className={`mt-20 grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8 border-t ${activeTheme.border}`}>
           <div>
-            <div className="text-2xl font-bold font-mono">1-3 Weeks</div>
-            <div className={`text-xs ${activeTheme.textMuted}`}>Typical Delivery Time</div>
+            <div className="text-2xl font-bold font-mono">1–4 weeks</div>
+            <div className={`text-xs ${activeTheme.textMuted}`}>Typical delivery time</div>
             <div className={`text-[10px] italic ${activeTheme.textMuted}`}>
               Larger projects may take longer.
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold font-mono">2-4</div>
+            <div className="text-2xl font-bold font-mono">2–4</div>
             <div className={`text-xs ${activeTheme.textMuted}`}>Instalment payment options</div>
           </div>
           <div>
-            <div className="text-2xl font-bold font-mono">1 Person</div>
+            <div className="text-2xl font-bold font-mono">One contact</div>
             <div className={`text-xs ${activeTheme.textMuted}`}>From first call to launch</div>
           </div>
           <div>
-            <div className="text-2xl font-bold font-mono">6+ Platforms</div>
-            <div className={`text-xs ${activeTheme.textMuted}`}>	Covered by Site Care</div>
+            <div className="text-2xl font-bold font-mono">6+ platforms</div>
+            <div className={`text-xs ${activeTheme.textMuted}`}>Covered by site care</div>
           </div>
         </div>
       </section>
 
       {/* SECTION 1: SELECTED WORK & CASE STUDIES */}
       <section id="portfolio" className="scroll-mt-16 md:scroll-mt-28 xl:scroll-mt-16 py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-          <div>
-            <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Portfolio / Archive</div>
-            <h2 className="text-3xl font-bold tracking-tight">Selected Studio Projects</h2>
-          </div>
-
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap gap-2">
-            {PORTFOLIO_FILTERS.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                aria-pressed={activeCategory === cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-3 py-1.5 text-xs rounded border transition-all ${
-                  activeCategory === cat 
-                    ? activeTheme.accent 
-                    : `${activeTheme.cardBg} ${activeTheme.border} ${activeTheme.textMuted} hover:text-white`
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+        <div className="mb-12">
+          <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Portfolio / Archive</div>
+          <h2 className="text-3xl font-bold tracking-tight">Selected Studio Projects</h2>
         </div>
 
-        {/* Projects Grid */}
-        <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
-          {filteredProjects.map((project) => (
-            <div
-              key={project.id}
-              className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-indicator ${activeTheme.border} ${activeTheme.cardBg}`}
-            >
-              {/* Card Image */}
-              <div className="relative aspect-video overflow-hidden bg-zinc-900">
-                <img
-                  src={project.image}
-                  alt={project.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
-                />
-                {project.category && (
-                  <div className="absolute top-3 left-3">
-                    <span className={`text-[10px] uppercase font-mono tracking-wider px-2 py-1 rounded border backdrop-blur-md ${activeTheme.badge}`}>
-                      {project.category}
-                    </span>
-                  </div>
-                )}
-                {project.status && (
-                  <div className="absolute top-3 right-3">
-                    <span className={`text-[10px] uppercase font-mono tracking-wider px-2 py-1 rounded border backdrop-blur-md ${activeTheme.badge}`}>
-                      {project.status}
-                    </span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="text-xs uppercase tracking-widest font-mono text-white bg-black/70 px-4 py-2 rounded-full border border-white/20 flex items-center gap-2">
-                    Inspect Project Specs <Maximize2 size={12} aria-hidden="true" />
-                  </span>
-                </div>
-              </div>
+        {/* Projects grid, one per group (a group with no projects is left out) */}
+        <div className="space-y-16">
+          {PORTFOLIO_GROUPS.map((group) => {
+            const projects = SAMPLE_PROJECTS.filter((project) => project.kind === group.kind);
+            if (projects.length === 0) return null;
+            return (
+              <div key={group.kind} role="group" aria-labelledby={`portfolio-${group.kind}-title`}>
+                <h3 id={`portfolio-${group.kind}-title`} className={`text-xs uppercase font-mono tracking-widest font-bold mb-6 ${activeTheme.textMuted}`}>{group.title}</h3>
+                <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
+                  {projects.map((project) => (
+                    <div
+                      key={project.id}
+                      className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[button:focus-visible]:outline has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-2 has-[button:focus-visible]:outline-indicator ${activeTheme.border} ${activeTheme.cardBg}`}
+                    >
+                      {/* Card Image: no overlays, so the screenshot stays fully visible */}
+                      <div className="relative aspect-video overflow-hidden bg-zinc-900">
+                        <img
+                          src={project.image}
+                          alt={project.imageAlt}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
+                        />
+                      </div>
 
-              {/* Card Body */}
-              <div className="p-6">
-                {project.client && <div className={`text-xs font-mono mb-1 ${activeTheme.textMuted}`}>{project.client}</div>}
-                <h3 className={`text-xl font-bold ${project.summary || project.tags.length ? 'mb-3' : ''} group-hover:underline flex items-center justify-between`}>
-                  {/* The button's ::after covers the whole card, so the card stays clickable and is keyboard-operable */}
-                  <button
-                    type="button"
-                    aria-haspopup="dialog"
-                    onClick={(e) => {
-                      projectOpenerRef.current = e.currentTarget;
-                      setSelectedProject(project);
-                    }}
-                    className="text-left cursor-pointer focus:outline-none after:absolute after:inset-0 after:content-['']"
-                  >
-                    {project.title}
-                  </button>
-                  <ArrowUpRight size={18} aria-hidden="true" className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                </h3>
-                {project.summary && (
-                  <p className={`text-sm leading-relaxed ${project.tags.length ? 'mb-6' : ''} ${activeTheme.textMuted}`}>
-                    {project.summary}
-                  </p>
-                )}
+                      {/* Card Body */}
+                      <div className="p-6">
+                        <p className={`text-[11px] font-mono uppercase tracking-widest mb-2 ${activeTheme.textMuted}`}>{project.eyebrow}</p>
+                        <h4 className="text-xl font-bold group-hover:underline">{project.title}</h4>
+                        {project.status && (
+                          <p className={`text-xs font-mono uppercase tracking-wider mt-1 ${activeTheme.textMuted}`}>{project.status}</p>
+                        )}
+                        {project.summary && (
+                          <p className={`text-sm leading-relaxed mt-3 ${project.tags.length ? 'mb-6' : ''} ${activeTheme.textMuted}`}>
+                            {project.summary}
+                          </p>
+                        )}
 
-                {/* Tech Tags */}
-                {project.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-4 border-t border-zinc-800/30">
-                  {project.tags.map((tag) => (
-                    <span key={tag} className={`text-[11px] font-mono px-2 py-0.5 rounded ${activeTheme.badge}`}>
-                      {tag}
-                    </span>
+                        {/* Tech Tags */}
+                        {project.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-4 border-t border-zinc-800/30">
+                          {project.tags.map((tag) => (
+                            <span key={tag} className={`text-[11px] font-mono px-2 py-0.5 rounded ${activeTheme.badge}`}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        )}
+
+                        {/* Actions. The project button's ::after covers the whole card, so the card stays clickable;
+                            the external link sits above it (relative z-10) so it works on its own. */}
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-6 text-sm font-medium">
+                          <button
+                            type="button"
+                            aria-haspopup="dialog"
+                            onClick={(e) => {
+                              projectOpenerRef.current = e.currentTarget;
+                              setSelectedProject(project);
+                            }}
+                            className="inline-flex items-center gap-1 text-left cursor-pointer focus:outline-none after:absolute after:inset-0 after:content-['']"
+                          >
+                            {projectActionLabel(project)}
+                            <span className="sr-only">: {project.title}</span>
+                            <ChevronRight size={14} aria-hidden="true" />
+                          </button>
+                          {renderExternalProjectLink(project, 'relative z-10')}
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -1416,20 +1460,20 @@ export default function App() {
               <X size={20} aria-hidden="true" />
             </button>
 
-            <div className="mb-6">
-              <div className="flex flex-wrap gap-2">
-                {[selectedProject.category, selectedProject.status].filter(Boolean).map((pill) => (
-                  <span key={pill} className={`text-xs font-mono uppercase tracking-widest px-2.5 py-1 rounded border ${activeTheme.badge}`}>
-                    {pill}
-                  </span>
-                ))}
-              </div>
-              <h2 id="project-dialog-title" className="text-2xl sm:text-3xl font-bold mt-4 mb-1">{selectedProject.title}</h2>
+            <div className="mb-6 pr-12">
+              <p className={`text-xs font-mono uppercase tracking-widest ${activeTheme.textMuted}`}>{selectedProject.eyebrow}</p>
+              <h2 id="project-dialog-title" className="text-2xl sm:text-3xl font-bold mt-2 mb-1">{selectedProject.title}</h2>
+              {selectedProject.status && (
+                <p className={`text-xs font-mono uppercase tracking-wider ${activeTheme.textMuted}`}>{selectedProject.status}</p>
+              )}
               {selectedProject.client && <p className={`text-sm font-mono ${activeTheme.textMuted}`}>Client Partner: {selectedProject.client}</p>}
+              {(selectedProject.liveUrl || selectedProject.demoUrl) && (
+                <div className="mt-4 text-sm font-medium">{renderExternalProjectLink(selectedProject)}</div>
+              )}
             </div>
 
             <div className="relative aspect-video rounded-lg overflow-hidden mb-6 border border-zinc-800">
-              <img src={selectedProject.image} alt={selectedProject.title} className="w-full h-full object-cover" />
+              <img src={selectedProject.image} alt={selectedProject.imageAlt} className="w-full h-full object-cover" />
             </div>
 
             {Object.keys(selectedProject.stats).length > 0 && (
@@ -1493,7 +1537,7 @@ export default function App() {
         </div>
       )}
 
-      {/* SECTION 2: SERVICES & CARE RETAINERS */}
+      {/* SECTION 2: SERVICES & SITE MAINTENANCE */}
       <section id="services" className="relative py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
         <div className="max-w-3xl lg:max-w-none mb-16">
           <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Studio Offerings</div>
@@ -1793,9 +1837,9 @@ export default function App() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Engineering Principles</div>
-            <h2 className="text-3xl font-bold tracking-tight mb-6">Modern tools, chosen for each project · Fast today, easy to maintain tomorrow</h2>
+            <h2 className="text-3xl font-bold tracking-tight mb-6">Fast today, easy to maintain tomorrow</h2>
             <p className={`text-base leading-relaxed mb-6 ${activeTheme.textMuted}`}>
-              We build with modern, lightweight tools chosen for each project, with a focus on speed, accessibility and code that’s easy to maintain. Every site is tested on real devices and checked for performance before launch.
+              I build with modern, lightweight tools chosen for each project, with a focus on speed, accessibility and code that’s easy to maintain. Every site is tested on real devices and checked for performance before launch.
             </p>
 
             <div className="space-y-4">
@@ -1823,21 +1867,25 @@ export default function App() {
 
           {/* Stack Pills */}
           <div className={`p-6 sm:p-8 rounded-xl border ${activeTheme.border} ${activeTheme.cardBg}`}>
-            <h3 className={`text-xs font-mono uppercase tracking-wider mb-6 font-bold ${activeTheme.textMuted}`}>TOOLS WE OFTEN USE</h3>
-            <div ref={toolsGridRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {TECH_STACK.map((item, index) => (
+            <h3 className={`text-xs font-mono uppercase tracking-wider mb-6 font-bold ${activeTheme.textMuted}`}>TOOLS I OFTEN USE</h3>
+            <div ref={toolsGridRef} className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+              {TOOL_GROUPS.map((group, index) => (
                 <div
-                  key={item.name}
+                  key={group.title}
                   style={toolsRevealDone ? undefined : { transitionDelay: `${index * 70}ms` }}
-                  className={`p-3 rounded border ${activeTheme.border} bg-zinc-900/30 transition-[opacity,transform,box-shadow] duration-500 ease-out hover:-translate-y-0.5 hover:shadow-lg ${
+                  className={`transition-[opacity,transform] duration-500 ease-out ${
                     toolsRevealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-                  } motion-reduce:opacity-100 motion-reduce:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
+                  } motion-reduce:opacity-100 motion-reduce:translate-y-0 motion-reduce:transition-none`}
                 >
-                  <div className="font-bold text-sm">{item.name}</div>
-                  <div className={`text-xs ${activeTheme.textMuted}`}>{item.role}</div>
-                  <span className={`inline-block mt-2 text-[9px] font-mono uppercase px-1.5 py-0.5 rounded border ${activeTheme.badge}`}>
-                    {item.category}
-                  </span>
+                  <h4 className={`text-[11px] font-mono uppercase tracking-widest font-bold pb-2 mb-3 border-b ${activeTheme.border}`}>{group.title}</h4>
+                  <ul className="space-y-2">
+                    {group.tools.map((tool) => (
+                      <li key={tool.name} className="text-sm leading-snug">
+                        <span className="font-bold">{tool.name}</span>
+                        <span className={`block text-xs ${activeTheme.textMuted}`}>{tool.role}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
@@ -1890,7 +1938,7 @@ export default function App() {
           <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Enquire</div>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">Plan your project</h2>
           <p className={`text-sm sm:text-base ${activeTheme.textMuted}`}>
-            Answer a few quick questions and we’ll come back with a clear plan and price, usually within two working days.
+            Answer a few quick questions and I’ll come back with a clear plan and price, usually within two working days.
           </p>
         </div>
 
@@ -1902,7 +1950,7 @@ export default function App() {
             <div role="status" className="py-8 flex items-center gap-3">
               <CheckCircle2 size={24} aria-hidden="true" className={successText} />
               <h3 ref={enquirySentRef} tabIndex={-1} className="text-xl font-bold focus:outline-none">
-                Thanks, we’ll be in touch within two working days.
+                Thanks, I’ll be in touch within two working days.
               </h3>
             </div>
           ) : (
@@ -2020,9 +2068,9 @@ export default function App() {
                 </div>
               </fieldset>
 
-              {/* 5. Tell us about your project */}
+              {/* 5. Tell me about your project */}
               <div>
-                <label htmlFor="enquiry-message" className="block text-xs font-mono mb-1">Tell us about your project.</label>
+                <label htmlFor="enquiry-message" className="block text-xs font-mono mb-1">Tell me about your project.</label>
                 <textarea
                   id="enquiry-message"
                   name="message"
@@ -2038,7 +2086,9 @@ export default function App() {
                   the dropdowns line up when a label wraps), stacked on mobile */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-y-0">
                 <div className="sm:grid sm:grid-rows-subgrid sm:row-span-3">
-                  <label htmlFor="enquiry-launch" className="block self-end text-xs font-mono mb-1">When would you like to launch?</label>
+                  <label htmlFor="enquiry-launch" className="block self-end text-xs font-mono mb-1">
+                    When would you like to launch?<span className={activeTheme.textMuted}> (optional)</span>
+                  </label>
                   <select
                     id="enquiry-launch"
                     name="launch"
@@ -2070,7 +2120,6 @@ export default function App() {
                       <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
-                  <p id="enquiry-budget-hint" className={`text-xs mt-1 ${activeTheme.textMuted}`}>A preference only, not a quote.</p>
                 </div>
               </div>
 
@@ -2090,14 +2139,14 @@ export default function App() {
 
               {submitStatus === 'error' && (
                 <p role="alert" className={`text-sm p-3 rounded border border-red-500/60 bg-red-500/10 ${errorText}`}>
-                  Sorry, we couldn’t send your enquiry. Your answers are still here, so please try again.
+                  Sorry, your enquiry couldn't be sent. Your answers are still here, so please try again.
                 </p>
               )}
 
               <div className="pt-6 border-t border-zinc-800/40 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4">
                 <p className={`text-xs ${activeTheme.textMuted}`}>
                   <a href="/privacy" className={`underline underline-offset-4 hover:opacity-70 rounded ${FOCUS_RING}`}>
-                    We’ll only use your details to reply to your enquiry.
+                    Your details will only be used to reply to your enquiry.
                   </a>
                 </p>
                 <button
@@ -2216,11 +2265,11 @@ export default function App() {
             <h2 id="partnership-dialog-title" className="text-2xl font-bold mb-4 pr-10">Portfolio Partnership</h2>
             <div className={`space-y-4 text-sm leading-relaxed ${activeTheme.textMuted}`}>
               <p>
-                Each round, we offer a small number of independent businesses a complimentary website in return for featuring the finished project as a case study.
+                Each round, I offer a small number of independent businesses a complimentary website in return for featuring the finished project as a case study.
               </p>
               <p>
                 <strong className={activeTheme.text}>Current round: {PARTNERSHIP_STATUS_LABELS[PARTNERSHIP_STATUS]}.</strong>
-                {PARTNERSHIP_STATUS !== 'soon' && <> We’re working with <span className="whitespace-nowrap">{PARTNERSHIP_PLACES}</span> local businesses.</>}
+                {PARTNERSHIP_STATUS !== 'soon' && <> I’m working with <span className="whitespace-nowrap">{PARTNERSHIP_PLACES}</span> local businesses.</>}
               </p>
               <p>
                 Want to hear about the next round?{' '}

@@ -211,7 +211,7 @@ export default function ClientPortal() {
                     <div className="xl:flex xl:flex-wrap xl:items-baseline xl:gap-x-2">
                       <p className="font-semibold text-emerald-900 xl:text-sm">Your website is online and running normally</p>
                       <p className="text-sm text-emerald-900/80 mt-1 xl:mt-0">
-                        No urgent issues. Two items are waiting on you before we can continue; see Upcoming work.
+                        No urgent issues. Two items are waiting on you before I can continue; see Upcoming work.
                       </p>
                     </div>
                   </div>
@@ -435,7 +435,7 @@ export default function ClientPortal() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-stone-900">Prefer email?</p>
                     <p className="text-xs text-stone-600 mt-0.5">
-                      You can contact us by email instead. Replies reach you the same way.
+                      You can contact me by email instead. Replies reach you the same way.
                     </p>
                     <button
                       type="button"

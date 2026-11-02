@@ -7,7 +7,6 @@ The public studio website for Iris & Oak, showcasing client work, digital produc
 - Web Dev: completed client websites
 - Product Design: PartsPilot prototype and Bloom demo
 - Systems: AccessHub prototype
-- Care Retainers: sample Website Care Report and Client Portal Dashboard
 
 Portfolio samples use fictional client information. They are demonstrations, not live client systems.
 
