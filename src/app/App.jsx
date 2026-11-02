@@ -220,6 +220,24 @@ const SAMPLE_PROJECTS = [
     imageAlt: 'The Kawari Company homepage: the headline ‘Expert advice. Impacting practice.’ beside a photo of a sunlit stone staircase.'
   },
   {
+    id: 'maison-vale',
+    title: 'Events by Maison Vale',
+    category: 'client-websites',
+    status: 'In Progress',
+    liveUrl: 'https://eventsbymaisonvale.com',
+    client: '',
+    summary: 'An elegant, editorial website for an events company with almost 30 years of experience in weddings, corporate events and special occasions.',
+    tags: ['Squarespace', 'Zapier', 'Resend'],
+    stats: {},
+    details: {
+      heading: 'Project scope & deliverables',
+      text: 'A refined, image-led website with dedicated pages for weddings, corporate events and special occasions, each with its own tailored enquiry form. The copy balances warmth with experience, and the special occasions page is written to suit everything from milestone birthdays to funerals.'
+    },
+    technicalExecution: 'Built on Squarespace so the client can update content themselves, with enquiry forms connected through Zapier and Resend to deliver clear, well-formatted notifications.',
+    image: '/images/maison-vale/homepage.webp',
+    imageAlt: 'Events by Maison Vale homepage: the script logo over an aerial photo of a candlelit wedding ceremony, with rows of gold chairs and draped fabric.'
+  },
+  {
     id: 'bloom',
     title: 'Bloom',
     eyebrow: 'Wellness & routines app',
