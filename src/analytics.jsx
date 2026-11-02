@@ -1,9 +1,6 @@
 import { Analytics } from '@vercel/analytics/react';
 
 // Vercel Web Analytics, with a visitor opt-out saved in this browser's local storage.
-// Data is only collected when the site is deployed on Vercel with Web Analytics enabled
-// for the project; elsewhere the script fails to load and nothing is sent.
-
 export const ANALYTICS_OPT_OUT_KEY = 'iris-oak-analytics-opt-out';
 
 export const isAnalyticsOptedOut = () => {

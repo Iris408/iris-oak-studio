@@ -5,6 +5,11 @@ export default {
   safelist: ['bg-zinc-950/80', 'bg-stone-100/80', 'bg-slate-950/80', 'bg-[#FAF8F5]/80'],
   theme: {
     extend: {
+      // Focus rings and selected states; the RGB channels are set per theme (INDICATOR_COLORS in App.jsx)
+      colors: {
+        indicator: 'rgb(var(--indicator) / <alpha-value>)',
+        'on-indicator': 'rgb(var(--on-indicator) / <alpha-value>)',
+      },
       fontFamily: {
         dyslexic: ['OpenDyslexic', 'sans-serif'],
       },

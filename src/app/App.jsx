@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { 
   Sliders, 
   ArrowUpRight, 
@@ -12,9 +12,7 @@ import {
   ChevronRight, 
   X, 
   Check, 
-  Maximize2, 
   Clock,
-  Activity,
   ChevronDown
 } from 'lucide-react';
 
@@ -22,6 +20,8 @@ import {
 const COLOR_THEMES = {
   monochrome: {
     name: 'Monochrome Dark',
+    themeColor: '#09090b', // browser UI colour (meta theme-color)
+    scheme: 'dark',
     bg: 'bg-zinc-950',
     text: 'text-zinc-100',
     textMuted: 'text-zinc-400',
@@ -35,6 +35,8 @@ const COLOR_THEMES = {
   },
   swiss: {
     name: 'Modern Swiss',
+    themeColor: '#f5f5f4', // browser UI colour (meta theme-color)
+    scheme: 'light',
     bg: 'bg-stone-100',
     text: 'text-stone-900',
     textMuted: 'text-stone-600',
@@ -43,17 +45,19 @@ const COLOR_THEMES = {
     accent: 'bg-red-600 text-white hover:bg-red-700',
     accentBorder: 'border-red-500',
     badge: 'bg-stone-200/80 text-stone-800 border-stone-300',
-    highlight: 'text-red-600',
+    highlight: 'text-red-700',
     highContrast: { textMuted: 'text-stone-900', border: 'border-stone-600' }
   },
   cobalt: {
     name: 'Midnight Cobalt',
+    themeColor: '#020617', // browser UI colour (meta theme-color)
+    scheme: 'dark',
     bg: 'bg-slate-950',
     text: 'text-slate-100',
     textMuted: 'text-slate-400',
     cardBg: 'bg-slate-900/80',
     border: 'border-slate-800',
-    accent: 'bg-indigo-500 text-white hover:bg-indigo-600',
+    accent: 'bg-indigo-600 text-white hover:bg-indigo-700',
     accentBorder: 'border-indigo-400',
     badge: 'bg-indigo-950/60 text-indigo-300 border-indigo-800/80',
     highlight: 'text-indigo-400',
@@ -61,6 +65,8 @@ const COLOR_THEMES = {
   },
   editorial: {
     name: 'Warm Editorial',
+    themeColor: '#faf8f5', // browser UI colour (meta theme-color)
+    scheme: 'light',
     bg: 'bg-[#FAF8F5]',
     text: 'text-[#1A1A1A]',
     textMuted: 'text-[#66605A]',
@@ -92,51 +98,115 @@ const TEXT_SIZES = {
 // Hero orbit: ellipse centred at (360, 260), rx 300, ry 140, tilted 28°, in a 720×520 stage.
 const ORBIT_PATH = 'M 95.1 119.2 A 300 140 28 1 1 624.9 400.8 A 300 140 28 1 1 95.1 119.2';
 
-const FOCUS_RING = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400';
+const FOCUS_RING = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indicator';
 
-// --- CONFIGURATOR PERSISTENCE ---
-const SETTINGS_STORAGE_KEY = 'studio-configurator-settings';
-
-const DEFAULT_SETTINGS = {
-  themeKey: 'monochrome',
-  typographyKey: 'sans',
-  textSize: 'default',
-  highContrast: false
+// Focus rings and selected states: emerald-700 on light themes and emerald-400 on dark ones (both at least 3:1).
+// RGB channels for the `indicator` / `on-indicator` colours in tailwind.config.js.
+const INDICATOR_COLORS = {
+  light: { '--indicator': '4 120 87', '--on-indicator': '255 255 255' },
+  dark: { '--indicator': '52 211 153', '--on-indicator': '0 0 0' }
 };
 
-// Returns saved settings, falling back to defaults for any missing or invalid value.
-const loadSettings = () => {
-  let saved = {};
+// --- DISPLAY SETTINGS ---
+// Only settings the visitor has chosen are saved; anything not chosen follows their device.
+const SETTINGS_STORAGE_KEY = 'iris-oak-display-settings';
+
+// Theme when none is chosen: Midnight Cobalt in dark mode, Warm Editorial otherwise
+const DEVICE_THEMES = { light: 'editorial', dark: 'cobalt' };
+const DEFAULT_SETTINGS = { typographyKey: 'serif', textSize: 'default' };
+
+// Returns only the saved settings that are still valid.
+const loadSavedSettings = () => {
+  let saved;
   try {
-    saved = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY)) || {};
+    saved = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY));
   } catch {
-    return DEFAULT_SETTINGS;
+    return {};
   }
-  if (typeof saved !== 'object' || Array.isArray(saved)) return DEFAULT_SETTINGS;
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
 
   const has = (obj, key) => typeof key === 'string' && Object.prototype.hasOwnProperty.call(obj, key);
-  return {
-    themeKey: has(COLOR_THEMES, saved.themeKey) ? saved.themeKey : DEFAULT_SETTINGS.themeKey,
-    typographyKey: has(TYPOGRAPHY_STYLES, saved.typographyKey) && TYPOGRAPHY_STYLES[saved.typographyKey].available
-      ? saved.typographyKey
-      : DEFAULT_SETTINGS.typographyKey,
-    textSize: has(TEXT_SIZES, saved.textSize) ? saved.textSize : DEFAULT_SETTINGS.textSize,
-    highContrast: typeof saved.highContrast === 'boolean' ? saved.highContrast : DEFAULT_SETTINGS.highContrast
-  };
+  const valid = {};
+  if (has(COLOR_THEMES, saved.themeKey)) valid.themeKey = saved.themeKey;
+  if (has(TYPOGRAPHY_STYLES, saved.typographyKey) && TYPOGRAPHY_STYLES[saved.typographyKey].available) valid.typographyKey = saved.typographyKey;
+  if (has(TEXT_SIZES, saved.textSize)) valid.textSize = saved.textSize;
+  if (typeof saved.highContrast === 'boolean') valid.highContrast = saved.highContrast;
+  return valid;
 };
+
+// Header dropdowns: close on Escape (returning focus to the button) or on a click outside.
+function useDropdownDismiss(isOpen, close, containerRef, buttonRef) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        close();
+        buttonRef.current?.focus();
+      }
+    };
+    const handlePointerDown = (e) => {
+      if (!containerRef.current?.contains(e.target)) close();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [isOpen, close, containerRef, buttonRef]);
+}
+
+// Tracks a media query such as the device's dark mode or contrast setting, including live changes.
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(query).matches);
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const mediaQuery = window.matchMedia(query);
+    const update = () => setMatches(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener('change', update);
+    return () => mediaQuery.removeEventListener('change', update);
+  }, [query]);
+  return matches;
+}
 
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-const PORTFOLIO_FILTERS = ['All', 'Web Dev', 'Product Builds', 'Systems', 'Care Retainers'];
+// Portfolio categories, in Portfolio dropdown and /portfolio page order. A category with no projects is hidden.
+const PORTFOLIO_CATEGORIES = [
+  {
+    id: 'client-websites',
+    name: 'Client Websites',
+    description: 'Websites designed and built for founders and independent businesses'
+  },
+  {
+    id: 'web-apps-tools',
+    name: 'Web Apps & Tools',
+    description: 'Dashboards, booking systems and internal tools that simplify day-to-day work'
+  },
+  {
+    id: 'product-builds',
+    name: 'Product Builds',
+    description: 'Self-initiated products exploring real problems, from idea to working prototype'
+  },
+  {
+    id: 'concept-sites',
+    name: 'Concept Sites',
+    description: 'Design explorations, showing what is possible for different industries'
+  }
+];
 
-// Portfolio projects. `category` shows as the left pill (and drives the filters);
-// `status` shows as the right pill.
+// Portfolio projects. `category` is a PORTFOLIO_CATEGORIES id; on /portfolio it shows as the left image badge.
+// `status` (Demo / Prototype) is the right image badge. `eyebrow` (optional) names who the project is for.
+// `tags` fill the Tech Stack list in the project popup. `liveUrl` (client sites) and `demoUrl` (product builds)
+// add an external link when set. Only add client projects once they're complete and the client has approved featuring them.
 const SAMPLE_PROJECTS = [
   {
     id: 'kawari-company',
-    title: 'Kawari Company',
+    title: 'The Kawari Company',
+    category: 'client-websites',
     status: '',
-    category: 'Web Dev',
+    liveUrl: 'https://www.kawaricompany.com',
     client: '',
     summary: 'A calm, minimalist first website built for a safeguarding consultancy with more than 25 years of experience: clear, credible and easy to get in touch.',
     tags: ['Next.js', 'TypeScript', 'CSS', 'React'],
@@ -145,14 +215,35 @@ const SAMPLE_PROJECTS = [
       heading: 'Project scope & deliverables',
       text: 'A clean, minimalist website that clearly presents the company’s expertise, services and gives prospective clients a simple way to get in touch.'
     },
-    technicalExecution: 'Designed and built in Webflow, with a responsive layout that adapts to different screen sizes.',
-    image: '/images/kawari-company/homepage.png'
+    technicalExecution: 'Built with Next.js and React, with a responsive layout that adapts to different screen sizes.',
+    image: '/images/kawari-company/homepage.png',
+    imageAlt: 'The Kawari Company homepage: the headline ‘Expert advice. Impacting practice.’ beside a photo of a sunlit stone staircase.'
+  },
+  {
+    id: 'maison-vale',
+    title: 'Events by Maison Vale',
+    category: 'client-websites',
+    status: 'In Progress',
+    liveUrl: 'https://eventsbymaisonvale.com',
+    client: '',
+    summary: 'An elegant, editorial website for an events company with almost 30 years of experience in weddings, corporate events and special occasions.',
+    tags: ['Squarespace', 'Zapier', 'Resend'],
+    stats: {},
+    details: {
+      heading: 'Project scope & deliverables',
+      text: 'A refined, image-led website with dedicated pages for weddings, corporate events and special occasions, each with its own tailored enquiry form. The copy balances warmth with experience, and the special occasions page is written to suit everything from milestone birthdays to funerals.'
+    },
+    technicalExecution: 'Built on Squarespace so the client can update content themselves, with enquiry forms connected through Zapier and Resend to deliver clear, well-formatted notifications.',
+    image: '/images/maison-vale/homepage.webp',
+    imageAlt: 'Events by Maison Vale homepage: the script logo over an aerial photo of a candlelit wedding ceremony, with rows of gold chairs and draped fabric.'
   },
   {
     id: 'bloom',
     title: 'Bloom',
+    eyebrow: 'Wellness & routines app',
+    category: 'product-builds',
     status: 'Demo',
-    category: 'Product Builds',
+    demoUrl: 'https://www.bloomapp.uk',
     client: '',
     summary: 'A calm visual planner for everyday routines, designed for neurodivergent users, with no streaks, pressure or falling behind.',
     tags: ['JavaScript', 'Vite', 'FastAPI', 'PostgreSQL', 'Python'],
@@ -166,13 +257,16 @@ const SAMPLE_PROJECTS = [
       ]
     },
     technicalExecution: 'Built with a JavaScript and Vite front end, a FastAPI back end and a PostgreSQL database, and set up as a progressive web app (PWA).',
-    image: '/images/bloom/overview.png'
+    image: '/images/bloom/overview.png',
+    imageAlt: 'Bloom landing page: the headline ‘A calmer way to build your day.’ beside a phone showing a day of gentle routines.'
   },
   {
     id: 'partspilot',
     title: 'PartsPilot',
-    status: 'Prototype',
-    category: 'Product Builds',
+    eyebrow: 'Inventory management',
+    category: 'product-builds',
+    status: 'Demo',
+    demoUrl: 'https://www.partspilot.uk',
     client: '',
     summary: 'Automotive inventory management platform for stock tracking, low-stock alerts and clear reporting for teams, all in one place.',
     tags: ['React', 'TypeScript', 'FastAPI', 'PostgreSQL', 'Docker'],
@@ -186,13 +280,16 @@ const SAMPLE_PROJECTS = [
       ]
     },
     technicalExecution: 'Built with a React and TypeScript front end, a FastAPI back end and a PostgreSQL database, with Docker used to containerise the application.',
-    image: '/images/partspilot/dashboard.png'
+    image: '/images/partspilot/dashboard.png',
+    imageAlt: 'PartsPilot landing page: the headline ‘Smart inventory. Stronger business.’ beside an inventory dashboard with stock figures and a trend chart.'
   },
   {
     id: 'accesshub',
     title: 'AccessHub',
-    status: 'Prototype',
-    category: 'Systems',
+    eyebrow: 'Access management system',
+    category: 'product-builds',
+    status: 'Demo',
+    demoUrl: 'https://accesshub-iris408.vercel.app',
     client: '',
     summary: 'One place to manage people, roles and access requests, so teams always know who can see what. Admins, managers and auditors each get the right level of access.',
     tags: ['React', 'TypeScript', 'FastAPI', 'PostgreSQL', 'RBAC'],
@@ -206,9 +303,20 @@ const SAMPLE_PROJECTS = [
       ]
     },
     technicalExecution: 'Built with a React and TypeScript front end, a FastAPI back end and a PostgreSQL database, using role-based access control (RBAC) to manage what each user can see and do.',
-    image: '/images/accesshub/dashboard.png'
+    image: '/images/accesshub/dashboard.png',
+    imageAlt: 'AccessHub sign-in page: the headline ‘A clearer view of who has access.’ above a diagram of admin, manager and viewer/auditor roles, beside a sign-in form.'
   }
 ];
+
+const projectsInCategory = (categoryId) => SAMPLE_PROJECTS.filter((project) => project.category === categoryId);
+const categoryName = (categoryId) => PORTFOLIO_CATEGORIES.find((category) => category.id === categoryId)?.name ?? '';
+// Categories with projects (dropdown and page sections)
+const VISIBLE_PORTFOLIO_CATEGORIES = PORTFOLIO_CATEGORIES.filter((category) => projectsInCategory(category.id).length > 0);
+// A category gets a filter pill only with at least two projects; the filter bar needs at least two such categories
+const FILTER_PORTFOLIO_CATEGORIES = VISIBLE_PORTFOLIO_CATEGORIES.filter((category) => projectsInCategory(category.id).length >= 2);
+const SHOW_PORTFOLIO_FILTERS = FILTER_PORTFOLIO_CATEGORIES.length >= 2;
+// Homepage "Recent Client Work"
+const CLIENT_WEBSITE_PROJECTS = projectsInCategory('client-websites');
 
 const CARE_PLANS = [
   {
@@ -227,7 +335,7 @@ const CARE_PLANS = [
       'Prioritised findings and practical recommendations',
       'Report delivered within 5 working days'
     ],
-    note: 'If you start an annual care plan within 14 days, the £149 check-up fee is credited toward it.',
+    note: 'If you start an annual maintenance plan within 14 days, the £149 check-up fee is credited toward it.',
     popular: false,
     type: 'one-off'
   },
@@ -295,46 +403,83 @@ const CARE_PLANS = [
   }
 ];
 
-const TECH_STACK = [
-  { name: 'React', role: 'Interactive User Interfaces', category: 'Engineering' },
-  { name: 'Next.js', role: 'Full-Stack Web Applications', category: 'Engineering' },
-  { name: 'TypeScript', role: 'Typed JavaScript Development', category: 'Engineering' },
-  { name: 'Astro', role: 'Content-Focused Websites', category: 'Engineering' },
-  { name: 'Tailwind CSS', role: 'Utility-First Styling', category: 'Design & Code' },
-  { name: 'Framer Motion', role: 'Interface Animation', category: 'Design & Code' },
-  { name: 'FastAPI', role: 'Python API Development', category: 'Engineering' },
-  { name: 'PostgreSQL', role: 'Relational Data Storage', category: 'Infrastructure' },
-  { name: 'Docker', role: 'Containerised Development', category: 'Infrastructure' },
-  { name: 'Vercel', role: 'Frontend Deployment', category: 'Infrastructure' }
+// Tools I often use, grouped by what they do for the client
+const TOOL_GROUPS = [
+  {
+    title: 'What you see',
+    tools: [
+      { name: 'React' },
+      { name: 'Next.js' },
+      { name: 'TypeScript' },
+      { name: 'JavaScript' },
+      { name: 'Tailwind CSS' },
+      { name: 'Vite' },
+      { name: 'Astro' }
+    ]
+  },
+  {
+    title: 'Behind the scenes',
+    tools: [
+      { name: 'Python' },
+      { name: 'FastAPI' },
+      { name: 'Go' },
+      { name: 'Node.js' },
+      { name: 'Resend' },
+      { name: 'Stripe' }
+    ]
+  },
+  {
+    title: 'Your data',
+    tools: [
+      { name: 'PostgreSQL' },
+      { name: 'SQLAlchemy' },
+      { name: 'Power BI' },
+      { name: 'Alembic' },
+      { name: 'SQLite' }
+    ]
+  },
+  {
+    title: 'Running & hosting',
+    tools: [
+      { name: 'Vercel' },
+      { name: 'Render' },
+      { name: 'Railway' },
+      { name: 'Docker' },
+      { name: 'GitHub Actions' },
+      { name: 'AWS' },
+      { name: 'Squarespace' },
+      { name: 'Wix' }
+    ]
+  }
 ];
 
 // --- STUDIO OFFERINGS ---
-// Tabbed categories in the Services section. Site Maintenance links to the existing care plans.
+// Tabbed categories in the Services section. Site Maintenance links to the existing plans.
 // One description per service, shared by the Studio Offerings tabs and the enquiry form choices
 const SERVICE_DESCRIPTIONS = {
   websites: 'A new site, or a fresh start for your existing one.',
   'booking-integrations': 'Connect your site to the tools you already use.',
   'business-tools': 'Automations and dashboards that save you time.',
   'web-apps': 'Built from the ground up for your business, with nothing off the shelf.',
-  'care-plans': 'Updates, checks and support after launch.'
+  'site-maintenance': 'Updates, checks and support after launch.'
 };
 
 const OFFERING_CATEGORIES = [
   { id: 'websites', name: 'Websites', positioning: SERVICE_DESCRIPTIONS.websites, Icon: Layout },
-  { id: 'booking-integrations', name: 'Booking & Integrations', positioning: SERVICE_DESCRIPTIONS['booking-integrations'], Icon: Layers },
+  { id: 'booking-integrations', name: 'Integrations', positioning: SERVICE_DESCRIPTIONS['booking-integrations'], Icon: Layers },
   { id: 'business-tools', name: 'Business Tools', positioning: SERVICE_DESCRIPTIONS['business-tools'], Icon: Zap },
   { id: 'web-apps', name: 'Web Apps', positioning: SERVICE_DESCRIPTIONS['web-apps'], Icon: Server }
 ];
 
-const CARE_OFFERING = { id: 'care-plans', name: 'Site Maintenance', positioning: SERVICE_DESCRIPTIONS['care-plans'], Icon: ShieldCheck };
+const CARE_OFFERING = { id: 'site-maintenance', name: 'Site Maintenance', positioning: SERVICE_DESCRIPTIONS['site-maintenance'], Icon: ShieldCheck };
 
 // Header dropdown
 const OFFERINGS_MENU = [
   { id: 'websites', label: 'Websites' },
-  { id: 'booking-integrations', label: 'Booking & Integrations' },
+  { id: 'booking-integrations', label: 'Integrations' },
   { id: 'business-tools', label: 'Business Tools' },
   { id: 'web-apps', label: 'Web Apps' },
-  { id: 'care-plans', label: 'Site Maintenance' }
+  { id: 'site-maintenance', label: 'Site Maintenance' }
 ];
 
 const WEBSITE_PACKAGES = [
@@ -652,26 +797,26 @@ function useDialogFocus(isOpen, dialogRef, onClose, returnFocusRef) {
 
 // --- Footer details ---
 const STUDIO_AVAILABILITY = 'Booking Projects for Winter';
-const CONTACT_EMAIL = 'contact@irisoak.dev';
 
 // Portfolio Partnership round status: 'open' | 'filled' | 'soon'
 const PARTNERSHIP_STATUS = 'open';
 const PARTNERSHIP_STATUS_LABELS = { open: 'Open', filled: 'Places filled', soon: 'Opening soon' };
 // Number of businesses in the current round
 const PARTNERSHIP_PLACES = '3';
+// ?package= value that pre-fills "Portfolio Partnership" on the homepage enquiry form
+const PARTNERSHIP_PACKAGE_PARAM = 'portfolio-partnership';
 
 // --- Enquiry form (submits to /api/enquiry; see api/enquiry.js) ---
 // Choice ids match the Studio Offerings ids, so "Discuss…" buttons can preselect them.
 const ENQUIRY_NEEDS = [
   { id: 'websites', label: 'Websites', desc: SERVICE_DESCRIPTIONS.websites },
-  { id: 'booking-integrations', label: 'Bookings & integrations', desc: SERVICE_DESCRIPTIONS['booking-integrations'] },
+  { id: 'booking-integrations', label: 'Integrations', desc: SERVICE_DESCRIPTIONS['booking-integrations'] },
   { id: 'business-tools', label: 'Business tools', desc: SERVICE_DESCRIPTIONS['business-tools'] },
   { id: 'web-apps', label: 'Web apps', desc: SERVICE_DESCRIPTIONS['web-apps'] },
-  { id: 'care-plans', label: 'Site maintenance', desc: SERVICE_DESCRIPTIONS['care-plans'] },
-  { id: 'not-sure', label: 'Not sure yet', desc: 'Tell us what you’re trying to do and we’ll suggest the right fit.' }
+  { id: 'site-maintenance', label: 'Site maintenance', desc: SERVICE_DESCRIPTIONS['site-maintenance'] },
+  { id: 'not-sure', label: 'Not sure yet', desc: 'Tell me what you’re trying to do and I’ll suggest the right fit.' }
 ];
 const ENQUIRY_LAUNCH_OPTIONS = ['ASAP', 'Within a month', '1–3 months', 'Flexible'];
-// Optional preference only, never a quote
 const ENQUIRY_BUDGET_OPTIONS = ['Under £1,000', '£1,000–£5,000', '£5,000–£15,000', '£15,000+', 'Not sure yet'];
 const ENQUIRY_ENDPOINT = '/api/enquiry';
 const ENQUIRY_TIMEOUT_MS = 20000;
@@ -692,24 +837,244 @@ const trimEnquiry = (details) => Object.fromEntries(Object.entries(details).map(
 // "Signature (£695)", "Smart Forms (from £450)"
 const packageLabel = (pkg) => `${pkg.name} (${pkg.prefix ? `${pkg.prefix} ` : ''}${pkg.price})`;
 
-export default function App() {
-  // Configurator state (restored from localStorage; drawer state is not persisted)
-  const [initialSettings] = useState(loadSettings);
-  const [themeKey, setThemeKey] = useState(initialSettings.themeKey);
-  const [typographyKey, setTypographyKey] = useState(initialSettings.typographyKey);
-  const [textSize, setTextSize] = useState(initialSettings.textSize);
-  const [highContrast, setHighContrast] = useState(initialSettings.highContrast);
+// --- LOOPING SCROLLERS (portfolio carousel, tool rows) ---
+// Categories with at least this many projects loop as a carousel on /portfolio; smaller ones stay a static grid.
+const CAROUSEL_MIN_PROJECTS = 3;
+const CAROUSEL_INTERVAL_MS = 5000;
+const TOOL_ROW_INTERVAL_MS = 2500;
+// After the visitor scrolls, swipes or uses the keyboard, automatic movement waits this long before resuming
+const MANUAL_SCROLL_PAUSE_MS = 3000;
+
+// Advances a horizontal scroller one item at a time ([data-loop-item] children, in order) and loops forwards only:
+// the caller renders copies of the first items after the last one, and once a copy reaches the start the scroller
+// jumps to the identical original, so there's no visible backwards slide. Movement pauses while the scroller is
+// hovered, focused, scrolled by the visitor or in a background tab. `enabled: false` (reduced motion) turns it off.
+// Returns `looping` (true only when the originals overflow, so the caller knows to render the copies) and `active`
+// (index of the leading original).
+function useLoopingScroller(ref, { count, interval, enabled }) {
+  const [looping, setLooping] = useState(false);
+  const [active, setActive] = useState(0);
+
+  // Loop only when the original items don't all fit
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !enabled) {
+      setLooping(false);
+      return undefined;
+    }
+    const measure = () => {
+      const items = el.querySelectorAll('[data-loop-item]');
+      if (count === 0 || items.length < count) return;
+      const style = getComputedStyle(el);
+      const contentWidth = el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const last = items[count - 1];
+      setLooping(last.offsetLeft + last.offsetWidth - items[0].offsetLeft > contentWidth + 1);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, count, enabled]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !looping) return undefined;
+    let hovered = false;
+    let focused = false;
+    let lastManual = 0;
+    let programmatic = false;
+    let endTimer;
+    const items = () => el.querySelectorAll('[data-loop-item]');
+    const position = (index) => {
+      const list = items();
+      return list[index].offsetLeft - list[0].offsetLeft;
+    };
+    const nearest = () => {
+      const list = items();
+      let best = 0;
+      let bestDistance = Infinity;
+      list.forEach((item, index) => {
+        const distance = Math.abs(item.offsetLeft - list[0].offsetLeft - el.scrollLeft);
+        if (distance < bestDistance) { bestDistance = distance; best = index; }
+      });
+      return best;
+    };
+    const onScrollEnd = () => {
+      const index = nearest();
+      // A copy is leading: move to the matching original (same picture, so it doesn't show)
+      if (index >= count) {
+        programmatic = true;
+        el.scrollLeft = position(index - count);
+        return;
+      }
+      programmatic = false;
+    };
+    const onScroll = () => {
+      if (!programmatic) lastManual = Date.now();
+      setActive(nearest() % count);
+      clearTimeout(endTimer);
+      endTimer = setTimeout(onScrollEnd, 150);
+    };
+    const markManual = () => { lastManual = Date.now(); };
+    const onEnter = () => { hovered = true; };
+    const onLeave = () => { hovered = false; };
+    const onFocusIn = () => { focused = true; };
+    const onFocusOut = (e) => { if (!el.contains(e.relatedTarget)) focused = false; };
+    const tick = () => {
+      if (hovered || focused || document.hidden || Date.now() - lastManual < MANUAL_SCROLL_PAUSE_MS) return;
+      const next = nearest() + 1;
+      if (next >= items().length) return;
+      programmatic = true;
+      el.scrollTo({ left: position(next), behavior: 'smooth' });
+    };
+    const events = [
+      ['scroll', onScroll], ['wheel', markManual], ['touchstart', markManual], ['pointerdown', markManual], ['keydown', markManual],
+      ['mouseenter', onEnter], ['mouseleave', onLeave], ['focusin', onFocusIn], ['focusout', onFocusOut]
+    ];
+    events.forEach(([type, handler]) => el.addEventListener(type, handler, { passive: true }));
+    const timer = setInterval(tick, interval);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(endTimer);
+      events.forEach(([type, handler]) => el.removeEventListener(type, handler));
+    };
+  }, [ref, looping, count, interval]);
+
+  return { looping, active };
+}
+
+// Copies used for looping are hidden from screen readers and can't be focused
+const makeInert = (el) => { if (el) el.inert = true; };
+
+// Portfolio carousel: two cards at a time from md, one on phones, in a swipeable row that loops 1 → 2 → 3 → 1.
+// The leading card gets its hover look while the carousel is moving on its own.
+function ProjectCarousel({ label, projects, renderCard }) {
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const scrollerRef = useRef(null);
+  const count = projects.length;
+  const { looping, active } = useLoopingScroller(scrollerRef, { count, interval: CAROUSEL_INTERVAL_MS, enabled: !reducedMotion });
+  // Two copies cover the two cards visible on desktop
+  const slides = looping ? [...projects, ...projects.slice(0, 2)] : projects;
+
+  return (
+    <div role="region" aria-roledescription="carousel" aria-label={label}>
+      {/* Padding leaves room for the highlight's lift and shadow inside the scroll area */}
+      <div
+        ref={scrollerRef}
+        className="-mx-4 px-4 -my-6 py-6 scroll-px-4 flex gap-8 overflow-x-auto snap-x snap-mandatory overscroll-x-contain [scrollbar-width:thin]"
+      >
+        {slides.map((project, index) => {
+          const isCopy = index >= count;
+          return (
+            <div
+              key={isCopy ? `${project.id}-copy` : project.id}
+              data-loop-item=""
+              data-project={project.id}
+              {...(isCopy
+                ? { 'aria-hidden': true, ref: makeInert }
+                : { role: 'group', 'aria-roledescription': 'slide', 'aria-label': `${index + 1} of ${count}` })}
+              className="grid shrink-0 snap-start w-full md:w-[calc((100%-2rem)/2)]"
+            >
+              {renderCard(project, { highlighted: looping && index % count === active })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Width of the edge fades on tool rows: no wider than a pill's border and padding, so pill text is never faded
+const TOOL_ROW_FADE = '0.75rem';
+
+// One "Tools I often use" category: a label and a swipeable row of tool pills that cycles through the tools
+// when they don't all fit. Keyboard users can focus the row and scroll it with the arrow keys.
+// Soft fades at either edge show there's more to scroll that way (only on the side(s) with more).
+function ToolRow({ title, tools, pillClass, labelClass, arrowClass }) {
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const rowRef = useRef(null);
+  const labelId = useId();
+  const { looping } = useLoopingScroller(rowRef, { count: tools.length, interval: TOOL_ROW_INTERVAL_MS, enabled: !reducedMotion });
+  const items = looping ? [...tools, ...tools] : tools;
+  const [edges, setEdges] = useState({ atStart: true, atEnd: true });
+
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el) return undefined;
+    const update = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      setEdges({ atStart: el.scrollLeft <= 1, atEnd: el.scrollLeft >= max - 1 });
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener('scroll', update);
+      observer.disconnect();
+    };
+  }, [looping]);
+
+  const fadeMask = `linear-gradient(to right, ${edges.atStart ? '#000' : 'transparent'} 0, #000 ${TOOL_ROW_FADE}, #000 calc(100% - ${TOOL_ROW_FADE}), ${edges.atEnd ? '#000' : 'transparent'} 100%)`;
+
+  return (
+    <div className="sm:grid sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:items-center sm:gap-3">
+      <h4 id={labelId} className={labelClass}>{title}</h4>
+      {/* The focus ring sits on this wrapper, outside the faded area, so the fades can't hide it */}
+      <div className="mt-2 sm:mt-0 rounded has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-indicator">
+      <div
+        ref={rowRef}
+        tabIndex={0}
+        role="region"
+        aria-labelledby={labelId}
+        data-fade-start={!edges.atStart || undefined}
+        data-fade-end={!edges.atEnd || undefined}
+        style={{ maskImage: fadeMask, WebkitMaskImage: fadeMask }}
+        className="py-1 overflow-x-auto snap-x snap-mandatory overscroll-x-contain rounded focus:outline-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        <ul className="flex items-center w-max">
+          {items.map((tool, index) => {
+            const isCopy = index >= tools.length;
+            return (
+              <li key={isCopy ? `${tool.name}-copy` : tool.name} data-loop-item="" aria-hidden={isCopy || undefined} className="flex items-center snap-start shrink-0">
+                <span className={pillClass}>{tool.name}</span>
+                {(looping || index < tools.length - 1) && <span aria-hidden="true" className={`px-1.5 text-xs ${arrowClass}`}>⊹</span>}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      </div>
+    </div>
+  );
+}
+
+// `page`: 'home' (index.html), 'portfolio' (/portfolio), 'partnership' (/portfolio-partnership) or 'not-found' (404.html)
+export default function App({ page = 'home' }) {
+  const isHome = page === 'home';
+  // Links to homepage sections work from either page
+  const homeHref = (hash) => (isHome ? hash : `/${hash}`);
+
+  // Display settings: the visitor's saved choices, otherwise their device settings (drawer state is not persisted)
+  const [savedSettings, setSavedSettings] = useState(loadSavedSettings);
+  const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
+  const prefersMoreContrast = useMediaQuery('(prefers-contrast: more)');
+  const themeKey = savedSettings.themeKey ?? DEVICE_THEMES[prefersDark ? 'dark' : 'light'];
+  const typographyKey = savedSettings.typographyKey ?? DEFAULT_SETTINGS.typographyKey;
+  const textSize = savedSettings.textSize ?? DEFAULT_SETTINGS.textSize;
+  const highContrast = savedSettings.highContrast ?? prefersMoreContrast;
+  const [displayStatus, setDisplayStatus] = useState(''); // announced after a reset
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const configButtonRef = useRef(null);
   const drawerRef = useRef(null);
 
   // Studio Details
   const studioName = "IRIS & OAK";
-  const studioTagline = 'We design and build high-precision websites and platforms, and provide ongoing care so you can scale with confidence.';
+  const studioTagline = 'I design and build high-precision websites and platforms, and provide ongoing care so you can scale with confidence.';
   const studioStatus = 'Now Booking Projects for Winter';
 
-  // Filtering state
-  const [activeCategory, setActiveCategory] = useState('All');
+  // Filtering state (/portfolio)
+  const [activeCategory, setActiveCategory] = useState('all');
   const [selectedProject, setSelectedProject] = useState(null);
   
   // Enquiry form
@@ -727,13 +1092,16 @@ export default function App() {
   // Studio Offerings tabs + header dropdown
   const [offeringTab, setOfferingTab] = useState('websites');
   const [isOfferingsMenuOpen, setIsOfferingsMenuOpen] = useState(false);
+  const [isPortfolioMenuOpen, setIsPortfolioMenuOpen] = useState(false);
+  const portfolioMenuRef = useRef(null);
+  const portfolioMenuButtonRef = useRef(null);
   const offeringsRef = useRef(null);
   const offeringTabRefs = useRef({});
   const offeringsMenuRef = useRef(null);
   const offeringsMenuButtonRef = useRef(null);
   const carePlansRef = useRef(null);
 
-  // Tools we often use
+  // Tools I often use
   const toolsGridRef = useRef(null);
   const [toolsRevealed, setToolsRevealed] = useState(false);
   const [toolsRevealDone, setToolsRevealDone] = useState(false);
@@ -743,23 +1111,44 @@ export default function App() {
     : COLOR_THEMES[themeKey];
   const activeFont = TYPOGRAPHY_STYLES[typographyKey];
   // Green status text: emerald-400 lacks contrast on the light themes, so use emerald-700 there
-  const successText = themeKey === 'swiss' || themeKey === 'editorial' ? 'text-emerald-700' : 'text-emerald-400';
-  const errorText = themeKey === 'swiss' || themeKey === 'editorial' ? 'text-red-700' : 'text-red-400';
+  const successText = activeTheme.scheme === 'light' ? 'text-emerald-700' : 'text-emerald-400';
+  const errorText = activeTheme.scheme === 'light' ? 'text-red-700' : 'text-red-400';
+
+  // Settings apply as soon as they're chosen; there is no separate Apply step
+  const chooseSetting = (key, value) => {
+    setSavedSettings((prev) => ({ ...prev, [key]: value }));
+    setDisplayStatus('');
+  };
+  const resetDisplaySettings = () => {
+    setSavedSettings({});
+    setDisplayStatus('Display settings now follow your device.');
+  };
 
   useEffect(() => {
     document.documentElement.style.fontSize = TEXT_SIZES[textSize].value;
   }, [textSize]);
 
+  // Native form controls and scrollbars match the theme
+  useEffect(() => {
+    document.documentElement.style.colorScheme = activeTheme.scheme;
+  }, [activeTheme.scheme]);
+
+  // Browser UI colour follows the active display theme (replaces the light/dark defaults in the HTML)
+  useEffect(() => {
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.setAttribute('content', activeTheme.themeColor));
+  }, [activeTheme.themeColor]);
+
   useEffect(() => {
     try {
-      window.localStorage.setItem(
-        SETTINGS_STORAGE_KEY,
-        JSON.stringify({ themeKey, typographyKey, textSize, highContrast })
-      );
+      if (Object.keys(savedSettings).length > 0) {
+        window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(savedSettings));
+      } else {
+        window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
+      }
     } catch {
       // Storage unavailable (private mode, blocked site data): settings last for this visit only.
     }
-  }, [themeKey, typographyKey, textSize, highContrast]);
+  }, [savedSettings]);
 
   useDialogFocus(isDrawerOpen, drawerRef, () => setIsDrawerOpen(false), configButtonRef);
 
@@ -769,12 +1158,6 @@ export default function App() {
   const projectBackdropPressRef = useRef(false);
   useDialogFocus(!!selectedProject, projectDialogRef, () => setSelectedProject(null), projectOpenerRef);
 
-  // Portfolio Partnership popup (opened from the footer)
-  const [isPartnershipOpen, setIsPartnershipOpen] = useState(false);
-  const partnershipDialogRef = useRef(null);
-  const partnershipOpenerRef = useRef(null);
-  const partnershipBackdropPressRef = useRef(false);
-  useDialogFocus(isPartnershipOpen, partnershipDialogRef, () => setIsPartnershipOpen(false), partnershipOpenerRef);
 
   // Move focus to the confirmation once the server has confirmed the enquiry was received
   useEffect(() => {
@@ -796,40 +1179,57 @@ export default function App() {
     });
   };
 
-  // Support links such as /#web-apps by opening the matching tab.
+  // /portfolio: bring a category section into view (and focus its heading) for links such as /portfolio#product-builds
+  const showPortfolioCategory = (id, { focus = false } = {}) => {
+    if (!VISIBLE_PORTFOLIO_CATEGORIES.some((category) => category.id === id)) return;
+    setActiveCategory('all');
+    requestAnimationFrame(() => {
+      const heading = document.getElementById(`${id}-title`);
+      heading?.closest('section')?.scrollIntoView();
+      if (focus) heading?.focus({ preventScroll: true });
+    });
+  };
+
   useEffect(() => {
-    const syncFromHash = () => {
-      const id = window.location.hash.slice(1);
-      if (OFFERING_CATEGORIES.some((c) => c.id === id)) showOffering(id);
-    };
+    if (page !== 'portfolio') return undefined;
+    const syncFromHash = () => showPortfolioCategory(window.location.hash.slice(1));
     syncFromHash();
     window.addEventListener('hashchange', syncFromHash);
     return () => window.removeEventListener('hashchange', syncFromHash);
+  }, [page]);
+
+  const handlePortfolioMenuSelect = (e, id) => {
+    setIsPortfolioMenuOpen(false);
+    if (page !== 'portfolio') return; // follow the link to /portfolio#id
+    e.preventDefault();
+    window.history.replaceState(null, '', `#${id}`);
+    showPortfolioCategory(id, { focus: true });
+  };
+
+  // Support links such as /#web-apps by opening the matching tab. Arriving from another page (e.g. /#contact),
+  // scroll to the section once it has rendered: the browser's own jump runs before the app has drawn the page.
+  useEffect(() => {
+    if (!isHome) return undefined;
+    const syncFromHash = (initial = false) => {
+      const id = window.location.hash.slice(1);
+      if (OFFERING_CATEGORIES.some((c) => c.id === id)) showOffering(id);
+      else if (initial && id) requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView());
+    };
+    syncFromHash(true);
+    const handleHashChange = () => syncFromHash();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Header dropdown: close on Escape (returning focus to its button) or on an outside click.
-  useEffect(() => {
-    if (!isOfferingsMenuOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setIsOfferingsMenuOpen(false);
-        offeringsMenuButtonRef.current?.focus();
-      }
-    };
-    const handlePointerDown = (e) => {
-      if (!offeringsMenuRef.current?.contains(e.target)) setIsOfferingsMenuOpen(false);
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handlePointerDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handlePointerDown);
-    };
-  }, [isOfferingsMenuOpen]);
+  const closeOfferingsMenu = useCallback(() => setIsOfferingsMenuOpen(false), []);
+  const closePortfolioMenu = useCallback(() => setIsPortfolioMenuOpen(false), []);
+  useDropdownDismiss(isOfferingsMenuOpen, closeOfferingsMenu, offeringsMenuRef, offeringsMenuButtonRef);
+  useDropdownDismiss(isPortfolioMenuOpen, closePortfolioMenu, portfolioMenuRef, portfolioMenuButtonRef);
 
   const handleOfferingsMenuSelect = (e, id) => {
-    e.preventDefault();
     setIsOfferingsMenuOpen(false);
+    if (!isHome) return; // follow the link to /#id
+    e.preventDefault();
     window.history.replaceState(null, '', `#${id}`);
     showOffering(id, { focusTab: true });
   };
@@ -850,7 +1250,90 @@ export default function App() {
     offeringTabRefs.current[next]?.focus();
   };
 
-  // Package card shared by Websites and Booking & Integrations.
+  // Portfolio card and popup actions: client sites open as "View project", portfolio builds as "See how it works"
+  const projectActionLabel = (project) => (project.category === 'client-websites' ? 'View project' : 'See how it works');
+
+  // "Visit live site ↗" for client sites, "View demo ↗" for portfolio builds; nothing without a URL
+  const renderExternalProjectLink = (project, className = '') => {
+    const href = project.liveUrl || project.demoUrl;
+    if (!href) return null;
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`underline underline-offset-4 hover:opacity-70 rounded ${FOCUS_RING} ${className}`}
+      >
+        {project.liveUrl ? 'Visit live site' : 'View demo'}
+        <span aria-hidden="true"> ↗</span>
+        <span className="sr-only">: {project.title} (opens in a new tab)</span>
+      </a>
+    );
+  };
+
+  // Project card for the homepage and /portfolio. `showCategory` adds the category badge (on /portfolio).
+  // `highlighted` gives the card its hover look (used by the carousel for the active project).
+  const renderProjectCard = (project, { headingLevel = 3, showCategory = false, highlighted = false } = {}) => {
+    const Title = `h${headingLevel}`;
+    const badgeClass = `text-[11px] uppercase font-mono tracking-wider px-2 py-1 rounded border shadow-sm ${activeTheme.bg} ${activeTheme.text} ${activeTheme.border}`;
+    return (
+      <div
+        key={project.id}
+        className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[button:focus-visible]:outline has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-2 has-[button:focus-visible]:outline-indicator ${highlighted ? 'shadow-xl -translate-y-1' : ''} ${activeTheme.border} ${activeTheme.cardBg}`}
+      >
+        {/* Card Image. Badges use the theme's solid background and text colours so they stay readable over any screenshot. */}
+        <div className="relative aspect-video overflow-hidden bg-zinc-900">
+          <img
+            src={project.image}
+            alt={project.imageAlt}
+            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100 ${highlighted ? 'scale-105' : ''}`}
+          />
+          {showCategory && (
+            <div className="absolute top-3 left-3">
+              <span className={badgeClass}>{categoryName(project.category)}</span>
+            </div>
+          )}
+          {project.status && (
+            <div className="absolute top-3 right-3">
+              <span className={badgeClass}>{project.status}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Card Body */}
+        <div className="p-6">
+          {project.eyebrow && (
+            <p className={`text-[11px] font-mono uppercase tracking-widest mb-2 ${activeTheme.textMuted}`}>{project.eyebrow}</p>
+          )}
+          <Title className="text-xl font-bold group-hover:underline">{project.title}</Title>
+          {project.summary && (
+            <p className={`text-sm leading-relaxed mt-3 ${activeTheme.textMuted}`}>{project.summary}</p>
+          )}
+
+          {/* Actions. The project button's ::after covers the whole card, so the card stays clickable;
+              the external link sits above it (relative z-10) so it works on its own. */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-6 text-sm font-medium">
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={(e) => {
+                projectOpenerRef.current = e.currentTarget;
+                setSelectedProject(project);
+              }}
+              className="inline-flex items-center gap-1 text-left cursor-pointer focus:outline-none after:absolute after:inset-0 after:content-['']"
+            >
+              {projectActionLabel(project)}
+              <span className="sr-only">: {project.title}</span>
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
+            {renderExternalProjectLink(project, 'relative z-10')}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Package card shared by Websites and Integrations.
   // Optional fields: prefix (e.g. "from"), priceNote, note, readyIn, cta (defaults to "Discuss {name}"), popular.
   const renderPackageCard = (pkg, need) => (
     <div
@@ -1015,14 +1498,10 @@ export default function App() {
   // Drop the stagger delays once the reveal has played, so hover/focus responds immediately
   useEffect(() => {
     if (!toolsRevealed || toolsRevealDone) return;
-    const timer = setTimeout(() => setToolsRevealDone(true), TECH_STACK.length * 70 + 600);
+    const timer = setTimeout(() => setToolsRevealDone(true), TOOL_GROUPS.length * 70 + 600);
     return () => clearTimeout(timer);
   }, [toolsRevealed, toolsRevealDone]);
 
-  const filteredProjects = useMemo(() => {
-    if (activeCategory === 'All') return SAMPLE_PROJECTS;
-    return SAMPLE_PROJECTS.filter(p => p.category === activeCategory);
-  }, [activeCategory]);
 
   const toggleEnquiryNeed = (id) => {
     setEnquiryNeeds((prev) => (prev.includes(id) ? prev.filter((need) => need !== id) : [...prev, id]));
@@ -1081,8 +1560,20 @@ export default function App() {
     if (pkg) setPackageInterest(pkg);
   };
 
+  // Links such as /?package=portfolio-partnership#contact (from the Portfolio Partnership page)
+  useEffect(() => {
+    if (!isHome) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('package') !== PARTNERSHIP_PACKAGE_PARAM) return;
+    preselectEnquiry({ pkg: 'Portfolio Partnership' });
+    window.history.replaceState(null, '', `/${window.location.hash}`);
+  }, [isHome]);
+
   return (
-    <div className={`min-h-screen ${activeTheme.bg} ${activeTheme.text} ${activeFont.class} transition-colors duration-300 relative selection:bg-zinc-700 selection:text-white`}>
+    <div
+      style={INDICATOR_COLORS[activeTheme.scheme]}
+      className={`min-h-screen ${activeTheme.bg} ${activeTheme.text} ${activeFont.class} transition-colors duration-300 motion-reduce:transition-none relative selection:bg-zinc-700 selection:text-white`}
+    >
       
       <a
         href="#main-content"
@@ -1107,14 +1598,53 @@ export default function App() {
 
           {/* Navigation Items */}
           <nav className={`hidden md:flex order-last xl:order-none w-full xl:w-auto justify-center items-center gap-8 pt-3 xl:pt-0 border-t xl:border-t-0 ${activeTheme.border} text-xs font-medium tracking-wide uppercase`}>
-            <a href="#portfolio" className="hover:opacity-70 transition-opacity">Portfolio</a>
+            <div ref={portfolioMenuRef} className="relative">
+              <button
+                ref={portfolioMenuButtonRef}
+                type="button"
+                aria-expanded={isPortfolioMenuOpen}
+                aria-controls="portfolio-menu"
+                onClick={() => {
+                  setIsOfferingsMenuOpen(false);
+                  setIsPortfolioMenuOpen((open) => !open);
+                }}
+                className={`inline-flex items-center gap-1 uppercase tracking-wide hover:opacity-70 transition-opacity rounded ${FOCUS_RING}`}
+              >
+                Portfolio
+                <ChevronDown size={14} aria-hidden="true" className={`transition-transform ${isPortfolioMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isPortfolioMenuOpen && (
+                <ul
+                  id="portfolio-menu"
+                  className={`absolute left-1/2 -translate-x-1/2 top-full mt-3 w-72 py-2 rounded-lg border shadow-xl animate-fade-in motion-reduce:animate-none ${activeTheme.bg} ${activeTheme.border} ${activeTheme.text}`}
+                >
+                  {VISIBLE_PORTFOLIO_CATEGORIES.map((category) => (
+                    <li key={category.id}>
+                      <a
+                        href={`/portfolio#${category.id}`}
+                        onClick={(e) => handlePortfolioMenuSelect(e, category.id)}
+                        className={`block px-4 py-2.5 hover:opacity-70 transition-opacity ${FOCUS_RING}`}
+                      >
+                        <span className="block">{category.name}</span>
+                        {category.description && (
+                          <span className={`block mt-0.5 text-[11px] font-normal normal-case tracking-normal ${activeTheme.textMuted}`}>{category.description}</span>
+                        )}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <div ref={offeringsMenuRef} className="relative">
               <button
                 ref={offeringsMenuButtonRef}
                 type="button"
                 aria-expanded={isOfferingsMenuOpen}
                 aria-controls="offerings-menu"
-                onClick={() => setIsOfferingsMenuOpen((open) => !open)}
+                onClick={() => {
+                  setIsPortfolioMenuOpen(false);
+                  setIsOfferingsMenuOpen((open) => !open);
+                }}
                 className={`inline-flex items-center gap-1 uppercase tracking-wide hover:opacity-70 transition-opacity rounded ${FOCUS_RING}`}
               >
                 Studio Offerings
@@ -1128,7 +1658,7 @@ export default function App() {
                   {OFFERINGS_MENU.map((item) => (
                     <li key={item.id}>
                       <a
-                        href={`#${item.id}`}
+                        href={homeHref(`#${item.id}`)}
                         onClick={(e) => handleOfferingsMenuSelect(e, item.id)}
                         className={`block px-4 py-2.5 whitespace-nowrap hover:opacity-70 transition-opacity ${FOCUS_RING}`}
                       >
@@ -1139,7 +1669,7 @@ export default function App() {
                 </ul>
               )}
             </div>
-            <a href="#engineering" className="hover:opacity-70 transition-opacity">Engineering</a>
+            <a href={homeHref('#engineering')} className="hover:opacity-70 transition-opacity">Engineering</a>
           </nav>
 
           {/* Action Controls */}
@@ -1148,16 +1678,19 @@ export default function App() {
               ref={configButtonRef}
               aria-haspopup="dialog"
               aria-expanded={isDrawerOpen}
-              aria-label="Studio Configurator"
-              onClick={() => setIsDrawerOpen(true)}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-all ${activeTheme.accentBorder} ${activeTheme.cardBg} hover:opacity-90`}
+              aria-label="Display settings"
+              onClick={() => {
+                setDisplayStatus('');
+                setIsDrawerOpen(true);
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-all ${activeTheme.accentBorder} ${activeTheme.cardBg} hover:opacity-90 ${FOCUS_RING}`}
             >
               <Sliders size={14} aria-hidden="true" />
-              <span className="hidden sm:inline">Studio Configurator</span>
+              <span className="hidden sm:inline">Display settings</span>
             </button>
             
             <a
-              href="#contact"
+              href={homeHref('#contact')}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${activeTheme.accent}`}
             >
               Enquire
@@ -1167,6 +1700,7 @@ export default function App() {
       </header>
 
       <main id="main-content" tabIndex={-1} className="focus:outline-none">
+      {isHome && (<>
       {/* DYNAMIC STUDIO HER0 SECTION */}
       <section className="relative isolate pt-20 pb-16 md:pt-32 md:pb-24 border-b border-dashed border-zinc-800/40 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Decorative slow-orbit background (behind content, non-interactive, static with reduced motion) */}
@@ -1183,7 +1717,7 @@ export default function App() {
         <div className="max-w-4xl">
           {/* Status Badge */}
           <div className={`inline-flex items-center gap-2 px-3 py-1 text-xs rounded-full border mb-6 backdrop-blur-sm opacity-90 border-emerald-500/30 bg-emerald-500/10 ${successText}`}>
-            <Activity size={12} aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
+            <span aria-hidden="true" className="leading-none">⛇</span>
             <span>{studioStatus}</span>
           </div>
 
@@ -1207,7 +1741,7 @@ export default function App() {
               <ArrowUpRight size={16} />
             </a>
             <a
-              href="#portfolio"
+              href="/portfolio"
               className={`inline-flex items-center gap-2 px-6 py-3 rounded text-sm font-medium border transition-all ${activeTheme.border} ${activeTheme.cardBg} hover:border-zinc-500`}
             >
               <span>Explore Portfolio</span>
@@ -1219,129 +1753,170 @@ export default function App() {
         {/* Minimal Metric Bar */}
         <div className={`mt-20 grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8 border-t ${activeTheme.border}`}>
           <div>
-            <div className="text-2xl font-bold font-mono">1-3 Weeks</div>
-            <div className={`text-xs ${activeTheme.textMuted}`}>Typical Delivery Time</div>
+            <div className="text-2xl font-bold font-mono">1–4 weeks</div>
+            <div className={`text-xs ${activeTheme.textMuted}`}>Typical delivery time</div>
             <div className={`text-[10px] italic ${activeTheme.textMuted}`}>
               Larger projects may take longer.
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold font-mono">2-4</div>
+            <div className="text-2xl font-bold font-mono">2–4</div>
             <div className={`text-xs ${activeTheme.textMuted}`}>Instalment payment options</div>
           </div>
           <div>
-            <div className="text-2xl font-bold font-mono">1 Person</div>
+            <div className="text-2xl font-bold font-mono">One contact</div>
             <div className={`text-xs ${activeTheme.textMuted}`}>From first call to launch</div>
           </div>
           <div>
-            <div className="text-2xl font-bold font-mono">6+ Platforms</div>
-            <div className={`text-xs ${activeTheme.textMuted}`}>	Covered by Site Care</div>
+            <div className="text-2xl font-bold font-mono">6+ platforms</div>
+            <div className={`text-xs ${activeTheme.textMuted}`}>Covered by site maintenance</div>
           </div>
         </div>
       </section>
 
-      {/* SECTION 1: SELECTED WORK & CASE STUDIES */}
+      {/* SECTION 1: RECENT CLIENT WORK (client websites only; everything else is on /portfolio) */}
       <section id="portfolio" className="scroll-mt-16 md:scroll-mt-28 xl:scroll-mt-16 py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
           <div>
             <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Portfolio / Archive</div>
-            <h2 className="text-3xl font-bold tracking-tight">Selected Studio Projects</h2>
+            <h2 className="text-3xl font-bold tracking-tight">Recent Client Work</h2>
+          </div>
+          <a href="/portfolio" className={`inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline rounded ${FOCUS_RING}`}>
+            View full portfolio
+            <ChevronRight size={14} aria-hidden="true" />
+          </a>
+        </div>
+        <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
+          {CLIENT_WEBSITE_PROJECTS.map((project) => renderProjectCard(project))}
+        </div>
+      </section>
+      </>)}
+
+      {/* PORTFOLIO PAGE (/portfolio): one section per category that has projects */}
+      {page === 'portfolio' && (
+      <div className="pt-16 pb-20 md:pt-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <div>
+            <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Portfolio / Archive</div>
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">Portfolio</h1>
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap gap-2">
-            {PORTFOLIO_FILTERS.map((cat) => (
+          {/* Category Filter Pills (only categories with at least two projects, and only when two or more qualify) */}
+          {SHOW_PORTFOLIO_FILTERS && (
+          <div role="group" aria-label="Filter projects" className="flex flex-wrap gap-2">
+            {[{ id: 'all', name: 'All' }, ...FILTER_PORTFOLIO_CATEGORIES].map((category) => (
               <button
-                key={cat}
+                key={category.id}
                 type="button"
-                aria-pressed={activeCategory === cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-3 py-1.5 text-xs rounded border transition-all ${
-                  activeCategory === cat 
-                    ? activeTheme.accent 
-                    : `${activeTheme.cardBg} ${activeTheme.border} ${activeTheme.textMuted} hover:text-white`
+                aria-pressed={activeCategory === category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={`px-3 py-2 text-xs rounded border transition-all ${FOCUS_RING} ${
+                  activeCategory === category.id
+                    ? `${activeTheme.accent} border-transparent`
+                    : `${activeTheme.cardBg} ${activeTheme.border} ${activeTheme.textMuted} hover:opacity-80`
                 }`}
               >
-                {cat}
+                {category.name}
               </button>
             ))}
           </div>
+          )}
         </div>
 
-        {/* Projects Grid */}
-        <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
-          {filteredProjects.map((project) => (
-            <div
-              key={project.id}
-              className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-emerald-400 ${activeTheme.border} ${activeTheme.cardBg}`}
-            >
-              {/* Card Image */}
-              <div className="relative aspect-video overflow-hidden bg-zinc-900">
-                <img
-                  src={project.image}
-                  alt={project.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
-                />
-                {project.category && (
-                  <div className="absolute top-3 left-3">
-                    <span className={`text-[10px] uppercase font-mono tracking-wider px-2 py-1 rounded border backdrop-blur-md ${activeTheme.badge}`}>
-                      {project.category}
-                    </span>
-                  </div>
-                )}
-                {project.status && (
-                  <div className="absolute top-3 right-3">
-                    <span className={`text-[10px] uppercase font-mono tracking-wider px-2 py-1 rounded border backdrop-blur-md ${activeTheme.badge}`}>
-                      {project.status}
-                    </span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="text-xs uppercase tracking-widest font-mono text-white bg-black/70 px-4 py-2 rounded-full border border-white/20 flex items-center gap-2">
-                    Inspect Project Specs <Maximize2 size={12} aria-hidden="true" />
-                  </span>
-                </div>
-              </div>
+        {/* Announces how many projects the filter shows */}
+        {SHOW_PORTFOLIO_FILTERS && (
+        <p role="status" className="sr-only">
+          {(() => {
+            const count = activeCategory === 'all' ? SAMPLE_PROJECTS.length : projectsInCategory(activeCategory).length;
+            return `Showing ${count} ${count === 1 ? 'project' : 'projects'}`;
+          })()}
+        </p>
+        )}
 
-              {/* Card Body */}
-              <div className="p-6">
-                {project.client && <div className={`text-xs font-mono mb-1 ${activeTheme.textMuted}`}>{project.client}</div>}
-                <h3 className={`text-xl font-bold ${project.summary || project.tags.length ? 'mb-3' : ''} group-hover:underline flex items-center justify-between`}>
-                  {/* The button's ::after covers the whole card, so the card stays clickable and is keyboard-operable */}
-                  <button
-                    type="button"
-                    aria-haspopup="dialog"
-                    onClick={(e) => {
-                      projectOpenerRef.current = e.currentTarget;
-                      setSelectedProject(project);
-                    }}
-                    className="text-left cursor-pointer focus:outline-none after:absolute after:inset-0 after:content-['']"
-                  >
-                    {project.title}
-                  </button>
-                  <ArrowUpRight size={18} aria-hidden="true" className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                </h3>
-                {project.summary && (
-                  <p className={`text-sm leading-relaxed ${project.tags.length ? 'mb-6' : ''} ${activeTheme.textMuted}`}>
-                    {project.summary}
-                  </p>
-                )}
-
-                {/* Tech Tags */}
-                {project.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-4 border-t border-zinc-800/30">
-                  {project.tags.map((tag) => (
-                    <span key={tag} className={`text-[11px] font-mono px-2 py-0.5 rounded ${activeTheme.badge}`}>
-                      {tag}
-                    </span>
-                  ))}
+        <div className="space-y-20">
+          {VISIBLE_PORTFOLIO_CATEGORIES
+            .filter((category) => activeCategory === 'all' || category.id === activeCategory)
+            .map((category) => (
+            <section key={category.id} id={category.id} aria-labelledby={`${category.id}-title`} className="scroll-mt-20 md:scroll-mt-32 xl:scroll-mt-20">
+              <h2 id={`${category.id}-title`} tabIndex={-1} className="text-2xl font-bold tracking-tight focus:outline-none">{category.name}</h2>
+              {category.description && <p className={`text-sm mt-2 ${activeTheme.textMuted}`}>{category.description}</p>}
+              {projectsInCategory(category.id).length >= CAROUSEL_MIN_PROJECTS ? (
+                <div className="mt-8">
+                  <ProjectCarousel
+                    label={`${category.name} projects`}
+                    projects={projectsInCategory(category.id)}
+                    renderCard={(project, options) => renderProjectCard(project, { ...options, showCategory: true })}
+                  />
                 </div>
-                )}
-              </div>
-            </div>
+              ) : (
+                <div className="grid gap-8 grid-cols-1 md:grid-cols-2 mt-8">
+                  {projectsInCategory(category.id).map((project) => renderProjectCard(project, { showCategory: true }))}
+                </div>
+              )}
+            </section>
           ))}
         </div>
-      </section>
+      </div>
+      )}
+
+      {/* PORTFOLIO PARTNERSHIP PAGE (/portfolio-partnership) */}
+      {page === 'partnership' && (
+      <div className="pt-16 pb-24 md:pt-24 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Studio</div>
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">Portfolio Partnership</h1>
+        <p className={`inline-flex items-center gap-2 mt-6 text-xs font-mono uppercase px-2.5 py-1 rounded border ${activeTheme.badge}`}>
+          <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          Current round: {PARTNERSHIP_STATUS_LABELS[PARTNERSHIP_STATUS]}
+        </p>
+        <div className={`mt-8 space-y-4 text-base leading-relaxed ${activeTheme.textMuted}`}>
+          <p>
+            Each round, I offer a small number of independent businesses a complimentary website in return for featuring the finished project as a case study.
+          </p>
+          {PARTNERSHIP_STATUS !== 'soon' && (
+            <p>I’m working with <span className="whitespace-nowrap">{PARTNERSHIP_PLACES}</span> local businesses.</p>
+          )}
+          <p>Want to hear about the next round?</p>
+        </div>
+        <a
+          href={`/?package=${PARTNERSHIP_PACKAGE_PARAM}#contact`}
+          className={`inline-flex items-center gap-2 mt-6 px-6 py-3 rounded text-sm font-medium transition-all shadow-sm ${activeTheme.accent} ${FOCUS_RING}`}
+        >
+          Get in touch
+          <ArrowUpRight size={16} aria-hidden="true" />
+        </a>
+      </div>
+      )}
+
+      {/* NOT FOUND PAGE (404.html) */}
+      {page === 'not-found' && (
+      <div className="pt-16 pb-24 md:pt-24 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        {/* Decorative character: a puzzled acorn (theme colour via currentColor) */}
+        <svg viewBox="0 0 160 180" aria-hidden="true" focusable="false" className={`mx-auto w-32 h-36 sm:w-40 sm:h-44 ${activeTheme.highlight}`}>
+          <path d="M80 44 Q83 28 98 22" stroke="currentColor" strokeWidth="5" strokeLinecap="round" fill="none" />
+          <path d="M28 74 Q80 18 132 74 Q132 86 120 88 L40 88 Q28 86 28 74 Z" fill="currentColor" fillOpacity="0.85" />
+          <path d="M44 66 Q80 44 116 66 M38 78 Q80 58 122 78" stroke="currentColor" strokeOpacity="0.35" strokeWidth="2" fill="none" />
+          <path d="M42 88 Q38 142 80 162 Q122 142 118 88 Z" fill="currentColor" fillOpacity="0.14" stroke="currentColor" strokeWidth="2.5" />
+          <path d="M55 104 Q63 98 71 102 M89 102 Q97 98 105 104" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <circle cx="63" cy="115" r="5" fill="currentColor" />
+          <circle cx="97" cy="115" r="5" fill="currentColor" />
+          <ellipse cx="80" cy="136" rx="6" ry="7" stroke="currentColor" strokeWidth="3" fill="none" />
+          <path d="M136 24 Q136 14 146 14 Q156 14 156 24 Q156 31 147 34 L147 40 M147 48 L147 49" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+        </svg>
+        <p className={`mt-8 text-xs uppercase font-mono tracking-widest ${activeTheme.textMuted}`}>Error 404</p>
+        <h1 className="mt-2 text-4xl sm:text-5xl font-bold tracking-tight">Page not found</h1>
+        <p className={`mt-4 text-base leading-relaxed ${activeTheme.textMuted}`}>
+          Sorry, the page you’re looking for doesn’t exist or may have moved.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <a href="/" className={`inline-flex items-center gap-2 px-6 py-3 rounded text-sm font-medium shadow-sm ${activeTheme.accent} ${FOCUS_RING}`}>
+            Back to the homepage
+          </a>
+          <a href="/#contact" className={`inline-flex items-center gap-2 px-6 py-3 rounded text-sm font-medium border ${activeTheme.border} ${activeTheme.cardBg} hover:opacity-80 ${FOCUS_RING}`}>
+            Make an enquiry
+          </a>
+        </div>
+      </div>
+      )}
 
       {/* PROJECT DEEP DIVE MODAL */}
       {selectedProject && (
@@ -1370,20 +1945,22 @@ export default function App() {
               <X size={20} aria-hidden="true" />
             </button>
 
-            <div className="mb-6">
-              <div className="flex flex-wrap gap-2">
-                {[selectedProject.category, selectedProject.status].filter(Boolean).map((pill) => (
-                  <span key={pill} className={`text-xs font-mono uppercase tracking-widest px-2.5 py-1 rounded border ${activeTheme.badge}`}>
-                    {pill}
-                  </span>
-                ))}
-              </div>
-              <h2 id="project-dialog-title" className="text-2xl sm:text-3xl font-bold mt-4 mb-1">{selectedProject.title}</h2>
+            <div className="mb-6 pr-12">
+              {selectedProject.eyebrow && (
+                <p className={`text-xs font-mono uppercase tracking-widest ${activeTheme.textMuted}`}>{selectedProject.eyebrow}</p>
+              )}
+              <h2 id="project-dialog-title" className="text-2xl sm:text-3xl font-bold mt-2 mb-1">{selectedProject.title}</h2>
+              {selectedProject.status && (
+                <p className={`text-xs font-mono uppercase tracking-wider ${activeTheme.textMuted}`}>{selectedProject.status}</p>
+              )}
               {selectedProject.client && <p className={`text-sm font-mono ${activeTheme.textMuted}`}>Client Partner: {selectedProject.client}</p>}
+              {(selectedProject.liveUrl || selectedProject.demoUrl) && (
+                <div className="mt-4 text-sm font-medium">{renderExternalProjectLink(selectedProject)}</div>
+              )}
             </div>
 
             <div className="relative aspect-video rounded-lg overflow-hidden mb-6 border border-zinc-800">
-              <img src={selectedProject.image} alt={selectedProject.title} className="w-full h-full object-cover" />
+              <img src={selectedProject.image} alt={selectedProject.imageAlt} className="w-full h-full object-cover" />
             </div>
 
             {Object.keys(selectedProject.stats).length > 0 && (
@@ -1427,6 +2004,21 @@ export default function App() {
               </div>
               )}
 
+              {/* Tech Stack: native <details>, so it opens with Enter/Space and announces its expanded state */}
+              {selectedProject.tags.length > 0 && (
+              <details className={`group/stack rounded border ${activeTheme.border}`}>
+                <summary className={`flex items-center justify-between gap-2 px-4 py-3 rounded cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm font-mono uppercase tracking-wider font-bold ${FOCUS_RING}`}>
+                  Tech Stack
+                  <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open/stack:rotate-180 motion-reduce:transition-none" />
+                </summary>
+                <ul className="flex flex-wrap gap-2 px-4 pb-4">
+                  {selectedProject.tags.map((tag) => (
+                    <li key={tag} className={`text-xs font-mono px-2 py-1 rounded ${activeTheme.badge}`}>{tag}</li>
+                  ))}
+                </ul>
+              </details>
+              )}
+
               <div className="pt-6 border-t border-zinc-800/40 flex justify-end gap-3">
                 <button
                   onClick={() => setSelectedProject(null)}
@@ -1435,7 +2027,7 @@ export default function App() {
                   Close
                 </button>
                 <a
-                  href="#contact"
+                  href={homeHref('#contact')}
                   onClick={() => setSelectedProject(null)}
                   className={`px-4 py-2 text-xs font-medium rounded ${activeTheme.accent}`}
                 >
@@ -1447,8 +2039,9 @@ export default function App() {
         </div>
       )}
 
-      {/* SECTION 2: SERVICES & CARE RETAINERS */}
-      <section id="services" className="relative py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
+      {isHome && (<>
+      {/* SECTION 2: SERVICES & SITE MAINTENANCE */}
+      <section id="studio-offerings" className="relative py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
         <div className="max-w-3xl lg:max-w-none mb-16">
           <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Studio Offerings</div>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
@@ -1459,7 +2052,7 @@ export default function App() {
           </p>
         </div>
 
-        {/* Studio Offerings: category tabs (Site Maintenance links to the care plans below) */}
+        {/* Studio Offerings: category tabs (Site Maintenance links to the plans below) */}
         <div ref={offeringsRef} id="offerings" className="mb-20 scroll-mt-20 md:scroll-mt-28 xl:scroll-mt-20">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-10">
             <div
@@ -1479,17 +2072,19 @@ export default function App() {
                     id={`offering-tab-${cat.id}`}
                     aria-selected={selected}
                     aria-controls={cat.id}
+                    aria-labelledby={`offering-tab-${cat.id}-name`}
+                    aria-describedby={`offering-tab-${cat.id}-desc`}
                     tabIndex={selected ? 0 : -1}
                     onClick={() => setOfferingTab(cat.id)}
                     className={`p-4 rounded-lg border text-left flex flex-col items-start transition-all ${FOCUS_RING} ${
                       selected
-                        ? `ring-2 ring-emerald-500/50 ${activeTheme.cardBg} ${activeTheme.border}`
+                        ? `ring-2 ring-indicator ${activeTheme.cardBg} ${activeTheme.border}`
                         : `${activeTheme.border} hover:opacity-80`
                     }`}
                   >
                     <cat.Icon size={18} aria-hidden="true" className={`mb-3 ${activeTheme.highlight}`} />
-                    <span className="block text-sm font-bold">{cat.name}</span>
-                    <span className={`block text-xs mt-1 ${activeTheme.textMuted}`}>{cat.positioning}</span>
+                    <span id={`offering-tab-${cat.id}-name`} className="block text-sm font-bold">{cat.name}</span>
+                    <span id={`offering-tab-${cat.id}-desc`} className={`block text-xs mt-1 ${activeTheme.textMuted}`}>{cat.positioning}</span>
                   </button>
                 );
               })}
@@ -1513,7 +2108,7 @@ export default function App() {
           </div>
 
           {/* Websites */}
-          <div id="websites" role="tabpanel" aria-labelledby="offering-tab-websites" hidden={offeringTab !== 'websites'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+          <div id="websites" role="tabpanel" aria-labelledby="offering-tab-websites-name" hidden={offeringTab !== 'websites'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
             <h3 className="sr-only">Websites</h3>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {WEBSITE_PACKAGES.map((pkg) => renderPackageCard(pkg, 'websites'))}
@@ -1521,9 +2116,9 @@ export default function App() {
             <p className={`mt-8 text-sm ${activeTheme.textMuted}`}>{WEBSITE_FOOTER}</p>
           </div>
 
-          {/* Booking & Integrations: full package cards plus tools footer */}
-          <div id="booking-integrations" role="tabpanel" aria-labelledby="offering-tab-booking-integrations" hidden={offeringTab !== 'booking-integrations'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
-            <h3 className="sr-only">Booking & Integrations</h3>
+          {/* Integrations: full package cards plus tools footer */}
+          <div id="booking-integrations" role="tabpanel" aria-labelledby="offering-tab-booking-integrations-name" hidden={offeringTab !== 'booking-integrations'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+            <h3 className="sr-only">Integrations</h3>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {BOOKING_PACKAGES.map((pkg) => renderPackageCard(pkg, 'booking-integrations'))}
             </div>
@@ -1541,7 +2136,7 @@ export default function App() {
           </div>
 
           {/* Business Tools: full package cards, tools footer and a link to Web Apps */}
-          <div id="business-tools" role="tabpanel" aria-labelledby="offering-tab-business-tools" hidden={offeringTab !== 'business-tools'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+          <div id="business-tools" role="tabpanel" aria-labelledby="offering-tab-business-tools-name" hidden={offeringTab !== 'business-tools'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
             <h3 className="sr-only">Business Tools</h3>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {BUSINESS_PACKAGES.map((pkg) => renderPackageCard(pkg, 'business-tools'))}
@@ -1577,7 +2172,7 @@ export default function App() {
           </div>
 
           {/* Web Apps */}
-          <div id="web-apps" role="tabpanel" aria-labelledby="offering-tab-web-apps" hidden={offeringTab !== 'web-apps'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+          <div id="web-apps" role="tabpanel" aria-labelledby="offering-tab-web-apps-name" hidden={offeringTab !== 'web-apps'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
             <h3 className="sr-only">Web Apps</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
               {WEB_APP_PACKAGES.map((pkg) => renderPackageCard(pkg, 'web-apps'))}
@@ -1593,9 +2188,9 @@ export default function App() {
           </div>
         </div>
 
-{/* Retainer Plans Grid */}
-<div ref={carePlansRef} id="care-plans" tabIndex={-1} className="mb-8 scroll-mt-20 md:scroll-mt-28 xl:scroll-mt-20 focus:outline-none">
-  <h3 className="text-3xl sm:text-4xl font-bold mb-2">Site Maintenance Care Plans</h3>
+{/* Site Maintenance Plans Grid */}
+<div ref={carePlansRef} id="site-maintenance" tabIndex={-1} className="mb-8 scroll-mt-20 md:scroll-mt-28 xl:scroll-mt-20 focus:outline-none">
+  <h3 className="text-3xl sm:text-4xl font-bold mb-2">Site Maintenance Plans</h3>
   <p className={`text-sm ${activeTheme.textMuted} mb-8`}>
     Ongoing care for custom-built websites, WordPress sites and websites built by Iris & Oak.
   </p>
@@ -1677,7 +2272,7 @@ export default function App() {
 
         <a
           href="#contact"
-          onClick={() => preselectEnquiry({ need: CARE_OFFERING.id, pkg: `${plan.name} care plan (${plan.price}/month)` })}
+          onClick={() => preselectEnquiry({ need: CARE_OFFERING.id, pkg: `${plan.name} maintenance plan (${plan.price}/month)` })}
           className={`w-full py-2.5 text-center rounded text-xs font-medium transition-all ${
             plan.popular
               ? activeTheme.accent
@@ -1745,9 +2340,9 @@ export default function App() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Engineering Principles</div>
-            <h2 className="text-3xl font-bold tracking-tight mb-6">Modern tools, chosen for each project · Fast today, easy to maintain tomorrow</h2>
+            <h2 className="text-3xl font-bold tracking-tight mb-6">Fast today, easy to maintain tomorrow</h2>
             <p className={`text-base leading-relaxed mb-6 ${activeTheme.textMuted}`}>
-              We build with modern, lightweight tools chosen for each project, with a focus on speed, accessibility and code that’s easy to maintain. Every site is tested on real devices and checked for performance before launch.
+              I build with modern, lightweight tools chosen for each project, with a focus on speed, accessibility and code that’s easy to maintain. Every site is tested on real devices and checked for performance before launch.
             </p>
 
             <div className="space-y-4">
@@ -1773,23 +2368,25 @@ export default function App() {
             </div>
           </div>
 
-          {/* Stack Pills */}
-          <div className={`p-6 sm:p-8 rounded-xl border ${activeTheme.border} ${activeTheme.cardBg}`}>
-            <h3 className={`text-xs font-mono uppercase tracking-wider mb-6 font-bold ${activeTheme.textMuted}`}>TOOLS WE OFTEN USE</h3>
-            <div ref={toolsGridRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {TECH_STACK.map((item, index) => (
+          {/* Tools I often use: one compact, swipeable row of pills per category */}
+          <div className={`p-5 sm:p-6 rounded-xl border ${activeTheme.border} ${activeTheme.cardBg}`}>
+            <h3 className={`text-xs font-mono uppercase tracking-wider mb-4 font-bold ${activeTheme.textMuted}`}>TOOLS I OFTEN USE</h3>
+            <div ref={toolsGridRef} className="space-y-4 sm:space-y-3">
+              {TOOL_GROUPS.map((group, index) => (
                 <div
-                  key={item.name}
+                  key={group.title}
                   style={toolsRevealDone ? undefined : { transitionDelay: `${index * 70}ms` }}
-                  className={`p-3 rounded border ${activeTheme.border} bg-zinc-900/30 transition-[opacity,transform,box-shadow] duration-500 ease-out hover:-translate-y-0.5 hover:shadow-lg ${
+                  className={`transition-[opacity,transform] duration-500 ease-out ${
                     toolsRevealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-                  } motion-reduce:opacity-100 motion-reduce:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
+                  } motion-reduce:opacity-100 motion-reduce:translate-y-0 motion-reduce:transition-none`}
                 >
-                  <div className="font-bold text-sm">{item.name}</div>
-                  <div className={`text-xs ${activeTheme.textMuted}`}>{item.role}</div>
-                  <span className={`inline-block mt-2 text-[9px] font-mono uppercase px-1.5 py-0.5 rounded border ${activeTheme.badge}`}>
-                    {item.category}
-                  </span>
+                  <ToolRow
+                    title={group.title}
+                    tools={group.tools}
+                    labelClass="text-[11px] font-mono uppercase tracking-widest font-bold"
+                    pillClass={`inline-block px-3 py-1 rounded-full border text-sm whitespace-nowrap ${activeTheme.border} ${activeTheme.bg}`}
+                    arrowClass={activeTheme.textMuted}
+                  />
                 </div>
               ))}
             </div>
@@ -1842,7 +2439,7 @@ export default function App() {
           <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Enquire</div>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">Plan your project</h2>
           <p className={`text-sm sm:text-base ${activeTheme.textMuted}`}>
-            Answer a few quick questions and we’ll come back with a clear plan and price, usually within two working days.
+            Answer a few quick questions and I’ll come back with a clear plan and price, usually within two working days.
           </p>
         </div>
 
@@ -1854,7 +2451,7 @@ export default function App() {
             <div role="status" className="py-8 flex items-center gap-3">
               <CheckCircle2 size={24} aria-hidden="true" className={successText} />
               <h3 ref={enquirySentRef} tabIndex={-1} className="text-xl font-bold focus:outline-none">
-                Thanks, we’ll be in touch within two working days.
+                Thanks, I’ll be in touch within two working days.
               </h3>
             </div>
           ) : (
@@ -1946,8 +2543,8 @@ export default function App() {
                     return (
                       <label
                         key={need.id}
-                        className={`relative flex flex-col gap-1 p-4 rounded border cursor-pointer transition-all has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-emerald-400 ${
-                          checked ? 'border-emerald-500 bg-emerald-500/10' : `${activeTheme.border} hover:border-zinc-500`
+                        className={`relative flex flex-col gap-1 p-4 rounded border cursor-pointer transition-all has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-indicator ${
+                          checked ? 'border-indicator bg-indicator/10' : `${activeTheme.border} hover:border-zinc-500`
                         }`}
                       >
                         <input
@@ -1961,8 +2558,8 @@ export default function App() {
                         />
                         <span className="flex items-center justify-between gap-2">
                           <span className="font-bold text-sm">{need.label}</span>
-                          <span aria-hidden="true" className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-700'}`}>
-                            {checked && <Check size={12} className="text-black" />}
+                          <span aria-hidden="true" className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center ${checked ? 'bg-indicator border-indicator' : 'border-zinc-700'}`}>
+                            {checked && <Check size={12} className="text-on-indicator" />}
                           </span>
                         </span>
                         <span id={`enquiry-need-${need.id}-desc`} className={`text-xs ${activeTheme.textMuted}`}>{need.desc}</span>
@@ -1972,9 +2569,9 @@ export default function App() {
                 </div>
               </fieldset>
 
-              {/* 5. Tell us about your project */}
+              {/* 5. Tell me about your project */}
               <div>
-                <label htmlFor="enquiry-message" className="block text-xs font-mono mb-1">Tell us about your project.</label>
+                <label htmlFor="enquiry-message" className="block text-xs font-mono mb-1">Tell me about your project.</label>
                 <textarea
                   id="enquiry-message"
                   name="message"
@@ -1990,7 +2587,9 @@ export default function App() {
                   the dropdowns line up when a label wraps), stacked on mobile */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-y-0">
                 <div className="sm:grid sm:grid-rows-subgrid sm:row-span-3">
-                  <label htmlFor="enquiry-launch" className="block self-end text-xs font-mono mb-1">When would you like to launch?</label>
+                  <label htmlFor="enquiry-launch" className="block self-end text-xs font-mono mb-1">
+                    When would you like to launch?<span className={activeTheme.textMuted}> (optional)</span>
+                  </label>
                   <select
                     id="enquiry-launch"
                     name="launch"
@@ -2022,7 +2621,6 @@ export default function App() {
                       <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
-                  <p id="enquiry-budget-hint" className={`text-xs mt-1 ${activeTheme.textMuted}`}>A preference only, not a quote.</p>
                 </div>
               </div>
 
@@ -2042,14 +2640,14 @@ export default function App() {
 
               {submitStatus === 'error' && (
                 <p role="alert" className={`text-sm p-3 rounded border border-red-500/60 bg-red-500/10 ${errorText}`}>
-                  Sorry, we couldn’t send your enquiry. Your answers are still here, so please try again.
+                  Sorry, your enquiry couldn't be sent. Your answers are still here, so please try again.
                 </p>
               )}
 
               <div className="pt-6 border-t border-zinc-800/40 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4">
                 <p className={`text-xs ${activeTheme.textMuted}`}>
                   <a href="/privacy" className={`underline underline-offset-4 hover:opacity-70 rounded ${FOCUS_RING}`}>
-                    We’ll only use your details to reply to your enquiry.
+                    Your details will only be used to reply to your enquiry.
                   </a>
                 </p>
                 <button
@@ -2083,6 +2681,7 @@ export default function App() {
         </div>
         </div>
       </section>
+      </>)}
       </main>
 
       {/* FOOTER */}
@@ -2100,26 +2699,23 @@ export default function App() {
             <p className={`text-xs ${activeTheme.textMuted}`}>
               Designed, Engineered, Cared for.
             </p>
-            <span className={`inline-block text-[10px] px-2 py-0.5 rounded border ${activeTheme.badge}`}>© {new Date().getFullYear()} Iris &amp; Oak</span>
           </div>
 
           {/* Studio */}
           <nav aria-labelledby="footer-studio-heading">
             <h2 id="footer-studio-heading" className={`text-xs font-mono uppercase tracking-widest mb-3 ${activeTheme.textMuted}`}>Studio</h2>
             <ul className="space-y-2 text-xs font-mono">
-              <li><a href="#portfolio" className={`hover:underline rounded ${FOCUS_RING}`}>Portfolio</a></li>
-              <li><a href="#services" className={`hover:underline rounded ${FOCUS_RING}`}>Studio Offerings</a></li>
-              <li><a href="#engineering" className={`hover:underline rounded ${FOCUS_RING}`}>Engineering</a></li>
+              <li><a href="/portfolio" className={`hover:underline rounded ${FOCUS_RING}`}>Portfolio</a></li>
+              <li><a href={homeHref('#studio-offerings')} className={`hover:underline rounded ${FOCUS_RING}`}>Studio Offerings</a></li>
+              <li><a href={homeHref('#engineering')} className={`hover:underline rounded ${FOCUS_RING}`}>Engineering</a></li>
               <li className="flex flex-wrap items-center gap-2">
-                <button
-                  ref={partnershipOpenerRef}
-                  type="button"
-                  aria-haspopup="dialog"
-                  onClick={() => setIsPartnershipOpen(true)}
-                  className={`hover:underline rounded text-left ${FOCUS_RING}`}
+                <a
+                  href="/portfolio-partnership"
+                  aria-current={page === 'partnership' ? 'page' : undefined}
+                  className={`hover:underline rounded ${FOCUS_RING}`}
                 >
                   Portfolio Partnership
-                </button>
+                </a>
                 <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border ${activeTheme.badge}`}>
                   <span className="sr-only">Status: </span>{PARTNERSHIP_STATUS_LABELS[PARTNERSHIP_STATUS]}
                 </span>
@@ -2131,75 +2727,19 @@ export default function App() {
           <div>
             <h2 className={`text-xs font-mono uppercase tracking-widest mb-3 ${activeTheme.textMuted}`}>Contact</h2>
             <ul className="space-y-2 text-xs font-mono">
-              <li><a href="#contact" className={`hover:underline rounded ${FOCUS_RING}`}>Enquire</a></li>
-              <li><a href={`mailto:${CONTACT_EMAIL}`} className={`hover:underline rounded break-all ${FOCUS_RING}`}>{CONTACT_EMAIL}</a></li>
+              <li><a href={homeHref('#contact')} className={`hover:underline rounded ${FOCUS_RING}`}>Enquire</a></li>
               <li><a href="/privacy" className={`hover:underline rounded ${FOCUS_RING}`}>Privacy</a></li>
             </ul>
           </div>
         </div>
+
+        {/* Copyright: last line of the page */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className={`mt-10 pt-6 border-t text-xs ${activeTheme.border} ${activeTheme.textMuted}`}>© {new Date().getFullYear()} Iris &amp; Oak</p>
+        </div>
       </footer>
 
-      {/* PORTFOLIO PARTNERSHIP POPUP */}
-      {isPartnershipOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in motion-reduce:animate-none"
-          // Close on a backdrop click only when the press also started on the backdrop
-          onMouseDown={(e) => { partnershipBackdropPressRef.current = e.target === e.currentTarget; }}
-          onClick={(e) => {
-            if (partnershipBackdropPressRef.current && e.target === e.currentTarget) setIsPartnershipOpen(false);
-          }}
-        >
-          <div
-            ref={partnershipDialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="partnership-dialog-title"
-            className={`relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border p-6 md:p-8 shadow-2xl ${activeTheme.bg} ${activeTheme.border} ${activeTheme.text}`}
-          >
-            <button
-              type="button"
-              aria-label="Close Portfolio Partnership details"
-              onClick={() => setIsPartnershipOpen(false)}
-              className={`absolute top-5 right-5 p-2 rounded-full hover:bg-zinc-800/50 transition-colors ${FOCUS_RING}`}
-            >
-              <X size={20} aria-hidden="true" />
-            </button>
-
-            <h2 id="partnership-dialog-title" className="text-2xl font-bold mb-4 pr-10">Portfolio Partnership</h2>
-            <div className={`space-y-4 text-sm leading-relaxed ${activeTheme.textMuted}`}>
-              <p>
-                Each round, we offer a small number of independent businesses a complimentary website in return for featuring the finished project as a case study.
-              </p>
-              <p>
-                <strong className={activeTheme.text}>Current round: {PARTNERSHIP_STATUS_LABELS[PARTNERSHIP_STATUS]}.</strong>
-                {PARTNERSHIP_STATUS !== 'soon' && <> We’re working with <span className="whitespace-nowrap">{PARTNERSHIP_PLACES}</span> local businesses.</>}
-              </p>
-              <p>
-                Want to hear about the next round?{' '}
-                <a
-                  href="#contact"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    preselectEnquiry({ pkg: 'Portfolio Partnership' });
-                    setIsPartnershipOpen(false);
-                    // After the popup closes (and returns focus), move on to the enquiry form
-                    requestAnimationFrame(() => {
-                      window.history.replaceState(null, '', '#contact');
-                      document.getElementById('contact')?.scrollIntoView();
-                      document.getElementById('enquiry-name')?.focus({ preventScroll: true });
-                    });
-                  }}
-                  className={`font-medium underline underline-offset-4 hover:opacity-70 rounded ${activeTheme.highlight} ${FOCUS_RING}`}
-                >
-                  Get in touch
-                </a>
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DYNAMIC CONFIGURATOR DRAWER */}
+      {/* DISPLAY SETTINGS DRAWER */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-fade-in motion-reduce:animate-none">
           <div
@@ -2212,15 +2752,15 @@ export default function App() {
             <div>
               <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800/40">
                 <div className="flex items-center gap-2">
-                  <Sliders size={18} />
-                  <h3 id="config-drawer-title" className="font-bold text-base">Studio Configurator</h3>
+                  <Sliders size={18} aria-hidden="true" />
+                  <h3 id="config-drawer-title" className="font-bold text-base">Display settings</h3>
                 </div>
                 <button
                   onClick={() => setIsDrawerOpen(false)}
                   className={`p-1 rounded hover:bg-zinc-800/40 ${FOCUS_RING}`}
-                  aria-label="Close Studio Configurator drawer"
+                  aria-label="Close display settings"
                 >
-                  <X size={18} />
+                  <X size={18} aria-hidden="true" />
                 </button>
               </div>
 
@@ -2234,13 +2774,13 @@ export default function App() {
                         key={key}
                         type="button"
                         aria-pressed={themeKey === key}
-                        onClick={() => setThemeKey(key)}
+                        onClick={() => chooseSetting('themeKey', key)}
                         className={`p-3 rounded text-xs text-left border flex items-center justify-between transition-all ${FOCUS_RING} ${
-                          themeKey === key ? 'ring-2 ring-emerald-500 border-emerald-500' : activeTheme.border
+                          themeKey === key ? 'ring-2 ring-indicator border-indicator' : activeTheme.border
                         }`}
                       >
                         <span className="font-medium text-[11px]">{theme.name}</span>
-                        {themeKey === key && <Check size={12} className="text-emerald-500" />}
+                        {themeKey === key && <Check size={12} aria-hidden="true" className="text-indicator" />}
                       </button>
                     ))}
                   </div>
@@ -2256,11 +2796,11 @@ export default function App() {
                         type="button"
                         aria-pressed={typographyKey === key}
                         disabled={!font.available}
-                        onClick={() => setTypographyKey(key)}
+                        onClick={() => chooseSetting('typographyKey', key)}
                         className={`p-2.5 rounded text-xs border text-center transition-all ${FOCUS_RING} ${
                           !font.available
                             ? `${activeTheme.border} opacity-50 cursor-not-allowed`
-                            : typographyKey === key ? 'ring-2 ring-emerald-500 border-emerald-500 font-bold' : activeTheme.border
+                            : typographyKey === key ? 'ring-2 ring-indicator border-indicator font-bold' : activeTheme.border
                         }`}
                       >
                         {font.label}
@@ -2281,9 +2821,9 @@ export default function App() {
                         key={key}
                         type="button"
                         aria-pressed={textSize === key}
-                        onClick={() => setTextSize(key)}
+                        onClick={() => chooseSetting('textSize', key)}
                         className={`p-2.5 rounded text-xs border text-center transition-all ${FOCUS_RING} ${
-                          textSize === key ? 'ring-2 ring-emerald-500 border-emerald-500 font-bold' : activeTheme.border
+                          textSize === key ? 'ring-2 ring-indicator border-indicator font-bold' : activeTheme.border
                         }`}
                       >
                         {size.label}
@@ -2300,13 +2840,13 @@ export default function App() {
                     role="switch"
                     aria-checked={highContrast}
                     aria-labelledby="config-contrast-label"
-                    onClick={() => setHighContrast(on => !on)}
+                    onClick={() => chooseSetting('highContrast', !highContrast)}
                     className={`w-full p-3 rounded text-xs border flex items-center justify-between transition-all ${FOCUS_RING} ${
-                      highContrast ? 'ring-2 ring-emerald-500 border-emerald-500' : activeTheme.border
+                      highContrast ? 'ring-2 ring-indicator border-indicator' : activeTheme.border
                     }`}
                   >
                     <span className="font-medium text-[11px]">{highContrast ? 'On' : 'Off'}</span>
-                    <span aria-hidden="true" className={`relative w-8 h-4 rounded-full transition-colors ${highContrast ? 'bg-emerald-500' : 'bg-zinc-600'}`}>
+                    <span aria-hidden="true" className={`relative w-8 h-4 rounded-full transition-colors ${highContrast ? 'bg-indicator' : 'bg-zinc-600'}`}>
                       <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${highContrast ? 'translate-x-4' : ''}`} />
                     </span>
                   </button>
@@ -2315,12 +2855,17 @@ export default function App() {
             </div>
 
             <div className="pt-8 border-t border-zinc-800/40">
+              <p className={`text-xs mb-3 ${activeTheme.textMuted}`}>
+                Changes apply straight away. Anything you haven’t chosen follows your device’s settings.
+              </p>
               <button
-                onClick={() => setIsDrawerOpen(false)}
-                className={`w-full py-3 text-xs font-medium rounded ${activeTheme.accent} ${FOCUS_RING}`}
+                type="button"
+                onClick={resetDisplaySettings}
+                className={`w-full py-3 text-xs font-medium rounded border transition-opacity hover:opacity-80 ${activeTheme.border} ${FOCUS_RING}`}
               >
-                Apply Studio Configurations
+                Reset to device settings
               </button>
+              <p role="status" className={`text-xs mt-3 min-h-[1rem] ${successText}`}>{displayStatus}</p>
             </div>
           </div>
         </div>

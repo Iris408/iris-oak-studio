@@ -215,7 +215,7 @@ export default function CareReport() {
         {/* Work Completed */}
         <section className="mt-12" aria-labelledby="work-heading">
           <h2 id="work-heading" className="font-serif text-2xl sm:text-3xl text-stone-900 mb-1">Work Completed</h2>
-          <p className="text-sm text-stone-600 mb-6">What we checked, what we changed, what we left unchanged, and why.</p>
+          <p className="text-sm text-stone-600 mb-6">What I checked, what I changed, what I left unchanged, and why.</p>
 
           <ol className="relative">
             {WORK_COMPLETED.map((item, index) => (
@@ -301,7 +301,7 @@ export default function CareReport() {
           <div className="mt-8 rounded-xl bg-[#1C2420] text-white p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
             <div>
               <p className="font-serif text-xl">Questions about this report?</p>
-              <p className="text-sm text-stone-300">Reply to the email and we'll get back to you within 1 business day, or explore ongoing maintenance plans.</p>
+              <p className="text-sm text-stone-300">Reply to the email and I’ll get back to you within 1 working day, or explore ongoing maintenance plans.</p>
             </div>
             <a
               href="/#studio-offerings"

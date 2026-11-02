@@ -12,7 +12,7 @@
 // confirmationSent reports whether Resend also accepted the confirmation. Otherwise { ok: false, ... }.
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NEEDS = ['Websites', 'Bookings & integrations', 'Business tools', 'Web apps', 'Site maintenance', 'Not sure yet'];
+const NEEDS = ['Websites', 'Integrations', 'Business tools', 'Web apps', 'Site maintenance', 'Not sure yet'];
 const LAUNCH_OPTIONS = ['ASAP', 'Within a month', '1–3 months', 'Flexible'];
 const BUDGET_OPTIONS = ['Under £1,000', '£1,000–£5,000', '£5,000–£15,000', '£15,000+', 'Not sure yet'];
 const MAX_LENGTH = { name: 100, business: 200, email: 254, message: 5000, package: 200 };
@@ -121,11 +121,11 @@ export default async function handler(req, res) {
       from: ENQUIRY_FROM_EMAIL,
       to: [enquiry.email],
       reply_to: ENQUIRY_TO_EMAIL,
-      subject: 'We’ve received your enquiry',
+      subject: 'I’ve received your enquiry',
       text: [
         'Thanks for getting in touch with Iris & Oak.',
         '',
-        'We’ve received your enquiry and will be in touch within two working days.',
+        'I’ve received your enquiry and will be in touch within two working days.',
         '',
         'If you didn’t send this enquiry, you can ignore this email.',
         '',
