@@ -12,7 +12,7 @@
 // confirmationSent reports whether Resend also accepted the confirmation. Otherwise { ok: false, ... }.
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NEEDS = ['Websites', 'Bookings & integrations', 'Business tools', 'Web apps', 'Site maintenance', 'Not sure yet'];
+const NEEDS = ['Websites', 'Integrations', 'Business tools', 'Web apps', 'Site maintenance', 'Not sure yet'];
 const LAUNCH_OPTIONS = ['ASAP', 'Within a month', '1–3 months', 'Flexible'];
 const BUDGET_OPTIONS = ['Under £1,000', '£1,000–£5,000', '£5,000–£15,000', '£15,000+', 'Not sure yet'];
 const MAX_LENGTH = { name: 100, business: 200, email: 254, message: 5000, package: 200 };

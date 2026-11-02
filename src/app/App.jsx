@@ -22,6 +22,7 @@ import {
 const COLOR_THEMES = {
   monochrome: {
     name: 'Monochrome Dark',
+    scheme: 'dark',
     bg: 'bg-zinc-950',
     text: 'text-zinc-100',
     textMuted: 'text-zinc-400',
@@ -35,6 +36,7 @@ const COLOR_THEMES = {
   },
   swiss: {
     name: 'Modern Swiss',
+    scheme: 'light',
     bg: 'bg-stone-100',
     text: 'text-stone-900',
     textMuted: 'text-stone-600',
@@ -43,17 +45,18 @@ const COLOR_THEMES = {
     accent: 'bg-red-600 text-white hover:bg-red-700',
     accentBorder: 'border-red-500',
     badge: 'bg-stone-200/80 text-stone-800 border-stone-300',
-    highlight: 'text-red-600',
+    highlight: 'text-red-700',
     highContrast: { textMuted: 'text-stone-900', border: 'border-stone-600' }
   },
   cobalt: {
     name: 'Midnight Cobalt',
+    scheme: 'dark',
     bg: 'bg-slate-950',
     text: 'text-slate-100',
     textMuted: 'text-slate-400',
     cardBg: 'bg-slate-900/80',
     border: 'border-slate-800',
-    accent: 'bg-indigo-500 text-white hover:bg-indigo-600',
+    accent: 'bg-indigo-600 text-white hover:bg-indigo-700',
     accentBorder: 'border-indigo-400',
     badge: 'bg-indigo-950/60 text-indigo-300 border-indigo-800/80',
     highlight: 'text-indigo-400',
@@ -61,6 +64,7 @@ const COLOR_THEMES = {
   },
   editorial: {
     name: 'Warm Editorial',
+    scheme: 'light',
     bg: 'bg-[#FAF8F5]',
     text: 'text-[#1A1A1A]',
     textMuted: 'text-[#66605A]',
@@ -92,38 +96,55 @@ const TEXT_SIZES = {
 // Hero orbit: ellipse centred at (360, 260), rx 300, ry 140, tilted 28°, in a 720×520 stage.
 const ORBIT_PATH = 'M 95.1 119.2 A 300 140 28 1 1 624.9 400.8 A 300 140 28 1 1 95.1 119.2';
 
-const FOCUS_RING = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400';
+const FOCUS_RING = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indicator';
 
-// --- CONFIGURATOR PERSISTENCE ---
-const SETTINGS_STORAGE_KEY = 'studio-configurator-settings';
-
-const DEFAULT_SETTINGS = {
-  themeKey: 'monochrome',
-  typographyKey: 'sans',
-  textSize: 'default',
-  highContrast: false
+// Focus rings and selected states: emerald-700 on light themes and emerald-400 on dark ones (both at least 3:1).
+// RGB channels for the `indicator` / `on-indicator` colours in tailwind.config.js.
+const INDICATOR_COLORS = {
+  light: { '--indicator': '4 120 87', '--on-indicator': '255 255 255' },
+  dark: { '--indicator': '52 211 153', '--on-indicator': '0 0 0' }
 };
 
-// Returns saved settings, falling back to defaults for any missing or invalid value.
-const loadSettings = () => {
-  let saved = {};
+// --- DISPLAY SETTINGS ---
+// Only settings the visitor has chosen are saved; anything not chosen follows their device.
+const SETTINGS_STORAGE_KEY = 'iris-oak-display-settings';
+
+// Theme when none is chosen: Midnight Cobalt in dark mode, Warm Editorial otherwise
+const DEVICE_THEMES = { light: 'editorial', dark: 'cobalt' };
+const DEFAULT_SETTINGS = { typographyKey: 'serif', textSize: 'default' };
+
+// Returns only the saved settings that are still valid.
+const loadSavedSettings = () => {
+  let saved;
   try {
-    saved = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY)) || {};
+    saved = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE_KEY));
   } catch {
-    return DEFAULT_SETTINGS;
+    return {};
   }
-  if (typeof saved !== 'object' || Array.isArray(saved)) return DEFAULT_SETTINGS;
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
 
   const has = (obj, key) => typeof key === 'string' && Object.prototype.hasOwnProperty.call(obj, key);
-  return {
-    themeKey: has(COLOR_THEMES, saved.themeKey) ? saved.themeKey : DEFAULT_SETTINGS.themeKey,
-    typographyKey: has(TYPOGRAPHY_STYLES, saved.typographyKey) && TYPOGRAPHY_STYLES[saved.typographyKey].available
-      ? saved.typographyKey
-      : DEFAULT_SETTINGS.typographyKey,
-    textSize: has(TEXT_SIZES, saved.textSize) ? saved.textSize : DEFAULT_SETTINGS.textSize,
-    highContrast: typeof saved.highContrast === 'boolean' ? saved.highContrast : DEFAULT_SETTINGS.highContrast
-  };
+  const valid = {};
+  if (has(COLOR_THEMES, saved.themeKey)) valid.themeKey = saved.themeKey;
+  if (has(TYPOGRAPHY_STYLES, saved.typographyKey) && TYPOGRAPHY_STYLES[saved.typographyKey].available) valid.typographyKey = saved.typographyKey;
+  if (has(TEXT_SIZES, saved.textSize)) valid.textSize = saved.textSize;
+  if (typeof saved.highContrast === 'boolean') valid.highContrast = saved.highContrast;
+  return valid;
 };
+
+// Tracks a media query such as the device's dark mode or contrast setting, including live changes.
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(query).matches);
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const mediaQuery = window.matchMedia(query);
+    const update = () => setMatches(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener('change', update);
+    return () => mediaQuery.removeEventListener('change', update);
+  }, [query]);
+  return matches;
+}
 
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -321,7 +342,7 @@ const SERVICE_DESCRIPTIONS = {
 
 const OFFERING_CATEGORIES = [
   { id: 'websites', name: 'Websites', positioning: SERVICE_DESCRIPTIONS.websites, Icon: Layout },
-  { id: 'booking-integrations', name: 'Booking & Integrations', positioning: SERVICE_DESCRIPTIONS['booking-integrations'], Icon: Layers },
+  { id: 'booking-integrations', name: 'Integrations', positioning: SERVICE_DESCRIPTIONS['booking-integrations'], Icon: Layers },
   { id: 'business-tools', name: 'Business Tools', positioning: SERVICE_DESCRIPTIONS['business-tools'], Icon: Zap },
   { id: 'web-apps', name: 'Web Apps', positioning: SERVICE_DESCRIPTIONS['web-apps'], Icon: Server }
 ];
@@ -331,7 +352,7 @@ const CARE_OFFERING = { id: 'care-plans', name: 'Site Maintenance', positioning:
 // Header dropdown
 const OFFERINGS_MENU = [
   { id: 'websites', label: 'Websites' },
-  { id: 'booking-integrations', label: 'Booking & Integrations' },
+  { id: 'booking-integrations', label: 'Integrations' },
   { id: 'business-tools', label: 'Business Tools' },
   { id: 'web-apps', label: 'Web Apps' },
   { id: 'care-plans', label: 'Site Maintenance' }
@@ -664,7 +685,7 @@ const PARTNERSHIP_PLACES = '3';
 // Choice ids match the Studio Offerings ids, so "Discuss…" buttons can preselect them.
 const ENQUIRY_NEEDS = [
   { id: 'websites', label: 'Websites', desc: SERVICE_DESCRIPTIONS.websites },
-  { id: 'booking-integrations', label: 'Bookings & integrations', desc: SERVICE_DESCRIPTIONS['booking-integrations'] },
+  { id: 'booking-integrations', label: 'Integrations', desc: SERVICE_DESCRIPTIONS['booking-integrations'] },
   { id: 'business-tools', label: 'Business tools', desc: SERVICE_DESCRIPTIONS['business-tools'] },
   { id: 'web-apps', label: 'Web apps', desc: SERVICE_DESCRIPTIONS['web-apps'] },
   { id: 'care-plans', label: 'Site maintenance', desc: SERVICE_DESCRIPTIONS['care-plans'] },
@@ -693,12 +714,15 @@ const trimEnquiry = (details) => Object.fromEntries(Object.entries(details).map(
 const packageLabel = (pkg) => `${pkg.name} (${pkg.prefix ? `${pkg.prefix} ` : ''}${pkg.price})`;
 
 export default function App() {
-  // Configurator state (restored from localStorage; drawer state is not persisted)
-  const [initialSettings] = useState(loadSettings);
-  const [themeKey, setThemeKey] = useState(initialSettings.themeKey);
-  const [typographyKey, setTypographyKey] = useState(initialSettings.typographyKey);
-  const [textSize, setTextSize] = useState(initialSettings.textSize);
-  const [highContrast, setHighContrast] = useState(initialSettings.highContrast);
+  // Display settings: the visitor's saved choices, otherwise their device settings (drawer state is not persisted)
+  const [savedSettings, setSavedSettings] = useState(loadSavedSettings);
+  const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
+  const prefersMoreContrast = useMediaQuery('(prefers-contrast: more)');
+  const themeKey = savedSettings.themeKey ?? DEVICE_THEMES[prefersDark ? 'dark' : 'light'];
+  const typographyKey = savedSettings.typographyKey ?? DEFAULT_SETTINGS.typographyKey;
+  const textSize = savedSettings.textSize ?? DEFAULT_SETTINGS.textSize;
+  const highContrast = savedSettings.highContrast ?? prefersMoreContrast;
+  const [displayStatus, setDisplayStatus] = useState(''); // announced after a reset
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const configButtonRef = useRef(null);
   const drawerRef = useRef(null);
@@ -743,23 +767,39 @@ export default function App() {
     : COLOR_THEMES[themeKey];
   const activeFont = TYPOGRAPHY_STYLES[typographyKey];
   // Green status text: emerald-400 lacks contrast on the light themes, so use emerald-700 there
-  const successText = themeKey === 'swiss' || themeKey === 'editorial' ? 'text-emerald-700' : 'text-emerald-400';
-  const errorText = themeKey === 'swiss' || themeKey === 'editorial' ? 'text-red-700' : 'text-red-400';
+  const successText = activeTheme.scheme === 'light' ? 'text-emerald-700' : 'text-emerald-400';
+  const errorText = activeTheme.scheme === 'light' ? 'text-red-700' : 'text-red-400';
+
+  // Settings apply as soon as they're chosen; there is no separate Apply step
+  const chooseSetting = (key, value) => {
+    setSavedSettings((prev) => ({ ...prev, [key]: value }));
+    setDisplayStatus('');
+  };
+  const resetDisplaySettings = () => {
+    setSavedSettings({});
+    setDisplayStatus('Display settings now follow your device.');
+  };
 
   useEffect(() => {
     document.documentElement.style.fontSize = TEXT_SIZES[textSize].value;
   }, [textSize]);
 
+  // Native form controls and scrollbars match the theme
+  useEffect(() => {
+    document.documentElement.style.colorScheme = activeTheme.scheme;
+  }, [activeTheme.scheme]);
+
   useEffect(() => {
     try {
-      window.localStorage.setItem(
-        SETTINGS_STORAGE_KEY,
-        JSON.stringify({ themeKey, typographyKey, textSize, highContrast })
-      );
+      if (Object.keys(savedSettings).length > 0) {
+        window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(savedSettings));
+      } else {
+        window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
+      }
     } catch {
       // Storage unavailable (private mode, blocked site data): settings last for this visit only.
     }
-  }, [themeKey, typographyKey, textSize, highContrast]);
+  }, [savedSettings]);
 
   useDialogFocus(isDrawerOpen, drawerRef, () => setIsDrawerOpen(false), configButtonRef);
 
@@ -850,7 +890,7 @@ export default function App() {
     offeringTabRefs.current[next]?.focus();
   };
 
-  // Package card shared by Websites and Booking & Integrations.
+  // Package card shared by Websites and Integrations.
   // Optional fields: prefix (e.g. "from"), priceNote, note, readyIn, cta (defaults to "Discuss {name}"), popular.
   const renderPackageCard = (pkg, need) => (
     <div
@@ -1082,7 +1122,10 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen ${activeTheme.bg} ${activeTheme.text} ${activeFont.class} transition-colors duration-300 relative selection:bg-zinc-700 selection:text-white`}>
+    <div
+      style={INDICATOR_COLORS[activeTheme.scheme]}
+      className={`min-h-screen ${activeTheme.bg} ${activeTheme.text} ${activeFont.class} transition-colors duration-300 motion-reduce:transition-none relative selection:bg-zinc-700 selection:text-white`}
+    >
       
       <a
         href="#main-content"
@@ -1148,12 +1191,15 @@ export default function App() {
               ref={configButtonRef}
               aria-haspopup="dialog"
               aria-expanded={isDrawerOpen}
-              aria-label="Studio Configurator"
-              onClick={() => setIsDrawerOpen(true)}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-all ${activeTheme.accentBorder} ${activeTheme.cardBg} hover:opacity-90`}
+              aria-label="Display settings"
+              onClick={() => {
+                setDisplayStatus('');
+                setIsDrawerOpen(true);
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-all ${activeTheme.accentBorder} ${activeTheme.cardBg} hover:opacity-90 ${FOCUS_RING}`}
             >
               <Sliders size={14} aria-hidden="true" />
-              <span className="hidden sm:inline">Studio Configurator</span>
+              <span className="hidden sm:inline">Display settings</span>
             </button>
             
             <a
@@ -1273,7 +1319,7 @@ export default function App() {
           {filteredProjects.map((project) => (
             <div
               key={project.id}
-              className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-emerald-400 ${activeTheme.border} ${activeTheme.cardBg}`}
+              className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-indicator ${activeTheme.border} ${activeTheme.cardBg}`}
             >
               {/* Card Image */}
               <div className="relative aspect-video overflow-hidden bg-zinc-900">
@@ -1479,17 +1525,19 @@ export default function App() {
                     id={`offering-tab-${cat.id}`}
                     aria-selected={selected}
                     aria-controls={cat.id}
+                    aria-labelledby={`offering-tab-${cat.id}-name`}
+                    aria-describedby={`offering-tab-${cat.id}-desc`}
                     tabIndex={selected ? 0 : -1}
                     onClick={() => setOfferingTab(cat.id)}
                     className={`p-4 rounded-lg border text-left flex flex-col items-start transition-all ${FOCUS_RING} ${
                       selected
-                        ? `ring-2 ring-emerald-500/50 ${activeTheme.cardBg} ${activeTheme.border}`
+                        ? `ring-2 ring-indicator ${activeTheme.cardBg} ${activeTheme.border}`
                         : `${activeTheme.border} hover:opacity-80`
                     }`}
                   >
                     <cat.Icon size={18} aria-hidden="true" className={`mb-3 ${activeTheme.highlight}`} />
-                    <span className="block text-sm font-bold">{cat.name}</span>
-                    <span className={`block text-xs mt-1 ${activeTheme.textMuted}`}>{cat.positioning}</span>
+                    <span id={`offering-tab-${cat.id}-name`} className="block text-sm font-bold">{cat.name}</span>
+                    <span id={`offering-tab-${cat.id}-desc`} className={`block text-xs mt-1 ${activeTheme.textMuted}`}>{cat.positioning}</span>
                   </button>
                 );
               })}
@@ -1513,7 +1561,7 @@ export default function App() {
           </div>
 
           {/* Websites */}
-          <div id="websites" role="tabpanel" aria-labelledby="offering-tab-websites" hidden={offeringTab !== 'websites'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+          <div id="websites" role="tabpanel" aria-labelledby="offering-tab-websites-name" hidden={offeringTab !== 'websites'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
             <h3 className="sr-only">Websites</h3>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {WEBSITE_PACKAGES.map((pkg) => renderPackageCard(pkg, 'websites'))}
@@ -1521,9 +1569,9 @@ export default function App() {
             <p className={`mt-8 text-sm ${activeTheme.textMuted}`}>{WEBSITE_FOOTER}</p>
           </div>
 
-          {/* Booking & Integrations: full package cards plus tools footer */}
-          <div id="booking-integrations" role="tabpanel" aria-labelledby="offering-tab-booking-integrations" hidden={offeringTab !== 'booking-integrations'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
-            <h3 className="sr-only">Booking & Integrations</h3>
+          {/* Integrations: full package cards plus tools footer */}
+          <div id="booking-integrations" role="tabpanel" aria-labelledby="offering-tab-booking-integrations-name" hidden={offeringTab !== 'booking-integrations'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+            <h3 className="sr-only">Integrations</h3>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {BOOKING_PACKAGES.map((pkg) => renderPackageCard(pkg, 'booking-integrations'))}
             </div>
@@ -1541,7 +1589,7 @@ export default function App() {
           </div>
 
           {/* Business Tools: full package cards, tools footer and a link to Web Apps */}
-          <div id="business-tools" role="tabpanel" aria-labelledby="offering-tab-business-tools" hidden={offeringTab !== 'business-tools'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+          <div id="business-tools" role="tabpanel" aria-labelledby="offering-tab-business-tools-name" hidden={offeringTab !== 'business-tools'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
             <h3 className="sr-only">Business Tools</h3>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {BUSINESS_PACKAGES.map((pkg) => renderPackageCard(pkg, 'business-tools'))}
@@ -1577,7 +1625,7 @@ export default function App() {
           </div>
 
           {/* Web Apps */}
-          <div id="web-apps" role="tabpanel" aria-labelledby="offering-tab-web-apps" hidden={offeringTab !== 'web-apps'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
+          <div id="web-apps" role="tabpanel" aria-labelledby="offering-tab-web-apps-name" hidden={offeringTab !== 'web-apps'} tabIndex={0} className={`rounded-xl ${FOCUS_RING}`}>
             <h3 className="sr-only">Web Apps</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
               {WEB_APP_PACKAGES.map((pkg) => renderPackageCard(pkg, 'web-apps'))}
@@ -1946,8 +1994,8 @@ export default function App() {
                     return (
                       <label
                         key={need.id}
-                        className={`relative flex flex-col gap-1 p-4 rounded border cursor-pointer transition-all has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-emerald-400 ${
-                          checked ? 'border-emerald-500 bg-emerald-500/10' : `${activeTheme.border} hover:border-zinc-500`
+                        className={`relative flex flex-col gap-1 p-4 rounded border cursor-pointer transition-all has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-indicator ${
+                          checked ? 'border-indicator bg-indicator/10' : `${activeTheme.border} hover:border-zinc-500`
                         }`}
                       >
                         <input
@@ -1961,8 +2009,8 @@ export default function App() {
                         />
                         <span className="flex items-center justify-between gap-2">
                           <span className="font-bold text-sm">{need.label}</span>
-                          <span aria-hidden="true" className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-700'}`}>
-                            {checked && <Check size={12} className="text-black" />}
+                          <span aria-hidden="true" className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center ${checked ? 'bg-indicator border-indicator' : 'border-zinc-700'}`}>
+                            {checked && <Check size={12} className="text-on-indicator" />}
                           </span>
                         </span>
                         <span id={`enquiry-need-${need.id}-desc`} className={`text-xs ${activeTheme.textMuted}`}>{need.desc}</span>
@@ -2199,7 +2247,7 @@ export default function App() {
         </div>
       )}
 
-      {/* DYNAMIC CONFIGURATOR DRAWER */}
+      {/* DISPLAY SETTINGS DRAWER */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-fade-in motion-reduce:animate-none">
           <div
@@ -2212,15 +2260,15 @@ export default function App() {
             <div>
               <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800/40">
                 <div className="flex items-center gap-2">
-                  <Sliders size={18} />
-                  <h3 id="config-drawer-title" className="font-bold text-base">Studio Configurator</h3>
+                  <Sliders size={18} aria-hidden="true" />
+                  <h3 id="config-drawer-title" className="font-bold text-base">Display settings</h3>
                 </div>
                 <button
                   onClick={() => setIsDrawerOpen(false)}
                   className={`p-1 rounded hover:bg-zinc-800/40 ${FOCUS_RING}`}
-                  aria-label="Close Studio Configurator drawer"
+                  aria-label="Close display settings"
                 >
-                  <X size={18} />
+                  <X size={18} aria-hidden="true" />
                 </button>
               </div>
 
@@ -2234,13 +2282,13 @@ export default function App() {
                         key={key}
                         type="button"
                         aria-pressed={themeKey === key}
-                        onClick={() => setThemeKey(key)}
+                        onClick={() => chooseSetting('themeKey', key)}
                         className={`p-3 rounded text-xs text-left border flex items-center justify-between transition-all ${FOCUS_RING} ${
-                          themeKey === key ? 'ring-2 ring-emerald-500 border-emerald-500' : activeTheme.border
+                          themeKey === key ? 'ring-2 ring-indicator border-indicator' : activeTheme.border
                         }`}
                       >
                         <span className="font-medium text-[11px]">{theme.name}</span>
-                        {themeKey === key && <Check size={12} className="text-emerald-500" />}
+                        {themeKey === key && <Check size={12} aria-hidden="true" className="text-indicator" />}
                       </button>
                     ))}
                   </div>
@@ -2256,11 +2304,11 @@ export default function App() {
                         type="button"
                         aria-pressed={typographyKey === key}
                         disabled={!font.available}
-                        onClick={() => setTypographyKey(key)}
+                        onClick={() => chooseSetting('typographyKey', key)}
                         className={`p-2.5 rounded text-xs border text-center transition-all ${FOCUS_RING} ${
                           !font.available
                             ? `${activeTheme.border} opacity-50 cursor-not-allowed`
-                            : typographyKey === key ? 'ring-2 ring-emerald-500 border-emerald-500 font-bold' : activeTheme.border
+                            : typographyKey === key ? 'ring-2 ring-indicator border-indicator font-bold' : activeTheme.border
                         }`}
                       >
                         {font.label}
@@ -2281,9 +2329,9 @@ export default function App() {
                         key={key}
                         type="button"
                         aria-pressed={textSize === key}
-                        onClick={() => setTextSize(key)}
+                        onClick={() => chooseSetting('textSize', key)}
                         className={`p-2.5 rounded text-xs border text-center transition-all ${FOCUS_RING} ${
-                          textSize === key ? 'ring-2 ring-emerald-500 border-emerald-500 font-bold' : activeTheme.border
+                          textSize === key ? 'ring-2 ring-indicator border-indicator font-bold' : activeTheme.border
                         }`}
                       >
                         {size.label}
@@ -2300,13 +2348,13 @@ export default function App() {
                     role="switch"
                     aria-checked={highContrast}
                     aria-labelledby="config-contrast-label"
-                    onClick={() => setHighContrast(on => !on)}
+                    onClick={() => chooseSetting('highContrast', !highContrast)}
                     className={`w-full p-3 rounded text-xs border flex items-center justify-between transition-all ${FOCUS_RING} ${
-                      highContrast ? 'ring-2 ring-emerald-500 border-emerald-500' : activeTheme.border
+                      highContrast ? 'ring-2 ring-indicator border-indicator' : activeTheme.border
                     }`}
                   >
                     <span className="font-medium text-[11px]">{highContrast ? 'On' : 'Off'}</span>
-                    <span aria-hidden="true" className={`relative w-8 h-4 rounded-full transition-colors ${highContrast ? 'bg-emerald-500' : 'bg-zinc-600'}`}>
+                    <span aria-hidden="true" className={`relative w-8 h-4 rounded-full transition-colors ${highContrast ? 'bg-indicator' : 'bg-zinc-600'}`}>
                       <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${highContrast ? 'translate-x-4' : ''}`} />
                     </span>
                   </button>
@@ -2315,12 +2363,17 @@ export default function App() {
             </div>
 
             <div className="pt-8 border-t border-zinc-800/40">
+              <p className={`text-xs mb-3 ${activeTheme.textMuted}`}>
+                Changes apply straight away. Anything you haven’t chosen follows your device’s settings.
+              </p>
               <button
-                onClick={() => setIsDrawerOpen(false)}
-                className={`w-full py-3 text-xs font-medium rounded ${activeTheme.accent} ${FOCUS_RING}`}
+                type="button"
+                onClick={resetDisplaySettings}
+                className={`w-full py-3 text-xs font-medium rounded border transition-opacity hover:opacity-80 ${activeTheme.border} ${FOCUS_RING}`}
               >
-                Apply Studio Configurations
+                Reset to device settings
               </button>
+              <p role="status" className={`text-xs mt-3 min-h-[1rem] ${successText}`}>{displayStatus}</p>
             </div>
           </div>
         </div>
