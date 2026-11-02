@@ -24,6 +24,7 @@ import {
 const COLOR_THEMES = {
   monochrome: {
     name: 'Monochrome Dark',
+    themeColor: '#09090b', // browser UI colour (meta theme-color)
     scheme: 'dark',
     bg: 'bg-zinc-950',
     text: 'text-zinc-100',
@@ -38,6 +39,7 @@ const COLOR_THEMES = {
   },
   swiss: {
     name: 'Modern Swiss',
+    themeColor: '#f5f5f4', // browser UI colour (meta theme-color)
     scheme: 'light',
     bg: 'bg-stone-100',
     text: 'text-stone-900',
@@ -52,6 +54,7 @@ const COLOR_THEMES = {
   },
   cobalt: {
     name: 'Midnight Cobalt',
+    themeColor: '#020617', // browser UI colour (meta theme-color)
     scheme: 'dark',
     bg: 'bg-slate-950',
     text: 'text-slate-100',
@@ -66,6 +69,7 @@ const COLOR_THEMES = {
   },
   editorial: {
     name: 'Warm Editorial',
+    themeColor: '#faf8f5', // browser UI colour (meta theme-color)
     scheme: 'light',
     bg: 'bg-[#FAF8F5]',
     text: 'text-[#1A1A1A]',
@@ -458,7 +462,7 @@ const SERVICE_DESCRIPTIONS = {
   'booking-integrations': 'Connect your site to the tools you already use.',
   'business-tools': 'Automations and dashboards that save you time.',
   'web-apps': 'Built from the ground up for your business, with nothing off the shelf.',
-  'care-plans': 'Updates, checks and support after launch.'
+  'site-maintenance': 'Updates, checks and support after launch.'
 };
 
 const OFFERING_CATEGORIES = [
@@ -468,7 +472,7 @@ const OFFERING_CATEGORIES = [
   { id: 'web-apps', name: 'Web Apps', positioning: SERVICE_DESCRIPTIONS['web-apps'], Icon: Server }
 ];
 
-const CARE_OFFERING = { id: 'care-plans', name: 'Site Maintenance', positioning: SERVICE_DESCRIPTIONS['care-plans'], Icon: ShieldCheck };
+const CARE_OFFERING = { id: 'site-maintenance', name: 'Site Maintenance', positioning: SERVICE_DESCRIPTIONS['site-maintenance'], Icon: ShieldCheck };
 
 // Header dropdown
 const OFFERINGS_MENU = [
@@ -476,7 +480,7 @@ const OFFERINGS_MENU = [
   { id: 'booking-integrations', label: 'Integrations' },
   { id: 'business-tools', label: 'Business Tools' },
   { id: 'web-apps', label: 'Web Apps' },
-  { id: 'care-plans', label: 'Site Maintenance' }
+  { id: 'site-maintenance', label: 'Site Maintenance' }
 ];
 
 const WEBSITE_PACKAGES = [
@@ -800,6 +804,8 @@ const PARTNERSHIP_STATUS = 'open';
 const PARTNERSHIP_STATUS_LABELS = { open: 'Open', filled: 'Places filled', soon: 'Opening soon' };
 // Number of businesses in the current round
 const PARTNERSHIP_PLACES = '3';
+// ?package= value that pre-fills "Portfolio Partnership" on the homepage enquiry form
+const PARTNERSHIP_PACKAGE_PARAM = 'portfolio-partnership';
 
 // --- Enquiry form (submits to /api/enquiry; see api/enquiry.js) ---
 // Choice ids match the Studio Offerings ids, so "Discuss…" buttons can preselect them.
@@ -808,7 +814,7 @@ const ENQUIRY_NEEDS = [
   { id: 'booking-integrations', label: 'Integrations', desc: SERVICE_DESCRIPTIONS['booking-integrations'] },
   { id: 'business-tools', label: 'Business tools', desc: SERVICE_DESCRIPTIONS['business-tools'] },
   { id: 'web-apps', label: 'Web apps', desc: SERVICE_DESCRIPTIONS['web-apps'] },
-  { id: 'care-plans', label: 'Site maintenance', desc: SERVICE_DESCRIPTIONS['care-plans'] },
+  { id: 'site-maintenance', label: 'Site maintenance', desc: SERVICE_DESCRIPTIONS['site-maintenance'] },
   { id: 'not-sure', label: 'Not sure yet', desc: 'Tell me what you’re trying to do and I’ll suggest the right fit.' }
 ];
 const ENQUIRY_LAUNCH_OPTIONS = ['ASAP', 'Within a month', '1–3 months', 'Flexible'];
@@ -937,7 +943,7 @@ function ProjectCarousel({ id, label, projects, renderCard, controlClass, focusR
   );
 }
 
-// `page`: 'home' (index.html) or 'portfolio' (portfolio.html, served at /portfolio)
+// `page`: 'home' (index.html), 'portfolio' (/portfolio), 'partnership' (/portfolio-partnership) or 'not-found' (404.html)
 export default function App({ page = 'home' }) {
   const isHome = page === 'home';
   // Links to homepage sections work from either page
@@ -1021,6 +1027,11 @@ export default function App({ page = 'home' }) {
     document.documentElement.style.colorScheme = activeTheme.scheme;
   }, [activeTheme.scheme]);
 
+  // Browser UI colour follows the active display theme (replaces the light/dark defaults in the HTML)
+  useEffect(() => {
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.setAttribute('content', activeTheme.themeColor));
+  }, [activeTheme.themeColor]);
+
   useEffect(() => {
     try {
       if (Object.keys(savedSettings).length > 0) {
@@ -1041,12 +1052,6 @@ export default function App({ page = 'home' }) {
   const projectBackdropPressRef = useRef(false);
   useDialogFocus(!!selectedProject, projectDialogRef, () => setSelectedProject(null), projectOpenerRef);
 
-  // Portfolio Partnership popup (opened from the footer)
-  const [isPartnershipOpen, setIsPartnershipOpen] = useState(false);
-  const partnershipDialogRef = useRef(null);
-  const partnershipOpenerRef = useRef(null);
-  const partnershipBackdropPressRef = useRef(false);
-  useDialogFocus(isPartnershipOpen, partnershipDialogRef, () => setIsPartnershipOpen(false), partnershipOpenerRef);
 
   // Move focus to the confirmation once the server has confirmed the enquiry was received
   useEffect(() => {
@@ -1080,31 +1085,34 @@ export default function App({ page = 'home' }) {
   };
 
   useEffect(() => {
-    if (isHome) return undefined;
+    if (page !== 'portfolio') return undefined;
     const syncFromHash = () => showPortfolioCategory(window.location.hash.slice(1));
     syncFromHash();
     window.addEventListener('hashchange', syncFromHash);
     return () => window.removeEventListener('hashchange', syncFromHash);
-  }, [isHome]);
+  }, [page]);
 
   const handlePortfolioMenuSelect = (e, id) => {
     setIsPortfolioMenuOpen(false);
-    if (isHome) return; // follow the link to /portfolio#id
+    if (page !== 'portfolio') return; // follow the link to /portfolio#id
     e.preventDefault();
     window.history.replaceState(null, '', `#${id}`);
     showPortfolioCategory(id, { focus: true });
   };
 
-  // Support links such as /#web-apps by opening the matching tab.
+  // Support links such as /#web-apps by opening the matching tab. Arriving from another page (e.g. /#contact),
+  // scroll to the section once it has rendered: the browser's own jump runs before the app has drawn the page.
   useEffect(() => {
     if (!isHome) return undefined;
-    const syncFromHash = () => {
+    const syncFromHash = (initial = false) => {
       const id = window.location.hash.slice(1);
       if (OFFERING_CATEGORIES.some((c) => c.id === id)) showOffering(id);
+      else if (initial && id) requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView());
     };
-    syncFromHash();
-    window.addEventListener('hashchange', syncFromHash);
-    return () => window.removeEventListener('hashchange', syncFromHash);
+    syncFromHash(true);
+    const handleHashChange = () => syncFromHash();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   const closeOfferingsMenu = useCallback(() => setIsOfferingsMenuOpen(false), []);
@@ -1446,6 +1454,15 @@ export default function App({ page = 'home' }) {
     if (pkg) setPackageInterest(pkg);
   };
 
+  // Links such as /?package=portfolio-partnership#contact (from the Portfolio Partnership page)
+  useEffect(() => {
+    if (!isHome) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('package') !== PARTNERSHIP_PACKAGE_PARAM) return;
+    preselectEnquiry({ pkg: 'Portfolio Partnership' });
+    window.history.replaceState(null, '', `/${window.location.hash}`);
+  }, [isHome]);
+
   return (
     <div
       style={INDICATOR_COLORS[activeTheme.scheme]}
@@ -1670,7 +1687,7 @@ export default function App({ page = 'home' }) {
       </>)}
 
       {/* PORTFOLIO PAGE (/portfolio): one section per category that has projects */}
-      {!isHome && (
+      {page === 'portfolio' && (
       <div className="pt-16 pb-20 md:pt-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
           <div>
@@ -1735,6 +1752,65 @@ export default function App({ page = 'home' }) {
               )}
             </section>
           ))}
+        </div>
+      </div>
+      )}
+
+      {/* PORTFOLIO PARTNERSHIP PAGE (/portfolio-partnership) */}
+      {page === 'partnership' && (
+      <div className="pt-16 pb-24 md:pt-24 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Studio</div>
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">Portfolio Partnership</h1>
+        <p className={`inline-flex items-center gap-2 mt-6 text-xs font-mono uppercase px-2.5 py-1 rounded border ${activeTheme.badge}`}>
+          <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          Current round: {PARTNERSHIP_STATUS_LABELS[PARTNERSHIP_STATUS]}
+        </p>
+        <div className={`mt-8 space-y-4 text-base leading-relaxed ${activeTheme.textMuted}`}>
+          <p>
+            Each round, I offer a small number of independent businesses a complimentary website in return for featuring the finished project as a case study.
+          </p>
+          {PARTNERSHIP_STATUS !== 'soon' && (
+            <p>I’m working with <span className="whitespace-nowrap">{PARTNERSHIP_PLACES}</span> local businesses.</p>
+          )}
+          <p>Want to hear about the next round?</p>
+        </div>
+        <a
+          href={`/?package=${PARTNERSHIP_PACKAGE_PARAM}#contact`}
+          className={`inline-flex items-center gap-2 mt-6 px-6 py-3 rounded text-sm font-medium transition-all shadow-sm ${activeTheme.accent} ${FOCUS_RING}`}
+        >
+          Get in touch
+          <ArrowUpRight size={16} aria-hidden="true" />
+        </a>
+      </div>
+      )}
+
+      {/* NOT FOUND PAGE (404.html) */}
+      {page === 'not-found' && (
+      <div className="pt-16 pb-24 md:pt-24 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        {/* Decorative character: a puzzled acorn (theme colour via currentColor) */}
+        <svg viewBox="0 0 160 180" aria-hidden="true" focusable="false" className={`mx-auto w-32 h-36 sm:w-40 sm:h-44 ${activeTheme.highlight}`}>
+          <path d="M80 44 Q83 28 98 22" stroke="currentColor" strokeWidth="5" strokeLinecap="round" fill="none" />
+          <path d="M28 74 Q80 18 132 74 Q132 86 120 88 L40 88 Q28 86 28 74 Z" fill="currentColor" fillOpacity="0.85" />
+          <path d="M44 66 Q80 44 116 66 M38 78 Q80 58 122 78" stroke="currentColor" strokeOpacity="0.35" strokeWidth="2" fill="none" />
+          <path d="M42 88 Q38 142 80 162 Q122 142 118 88 Z" fill="currentColor" fillOpacity="0.14" stroke="currentColor" strokeWidth="2.5" />
+          <path d="M55 104 Q63 98 71 102 M89 102 Q97 98 105 104" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <circle cx="63" cy="115" r="5" fill="currentColor" />
+          <circle cx="97" cy="115" r="5" fill="currentColor" />
+          <ellipse cx="80" cy="136" rx="6" ry="7" stroke="currentColor" strokeWidth="3" fill="none" />
+          <path d="M136 24 Q136 14 146 14 Q156 14 156 24 Q156 31 147 34 L147 40 M147 48 L147 49" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+        </svg>
+        <p className={`mt-8 text-xs uppercase font-mono tracking-widest ${activeTheme.textMuted}`}>Error 404</p>
+        <h1 className="mt-2 text-4xl sm:text-5xl font-bold tracking-tight">Page not found</h1>
+        <p className={`mt-4 text-base leading-relaxed ${activeTheme.textMuted}`}>
+          Sorry, the page you’re looking for doesn’t exist or may have moved.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <a href="/" className={`inline-flex items-center gap-2 px-6 py-3 rounded text-sm font-medium shadow-sm ${activeTheme.accent} ${FOCUS_RING}`}>
+            Back to the homepage
+          </a>
+          <a href="/#contact" className={`inline-flex items-center gap-2 px-6 py-3 rounded text-sm font-medium border ${activeTheme.border} ${activeTheme.cardBg} hover:opacity-80 ${FOCUS_RING}`}>
+            Make an enquiry
+          </a>
         </div>
       </div>
       )}
@@ -1862,7 +1938,7 @@ export default function App({ page = 'home' }) {
 
       {isHome && (<>
       {/* SECTION 2: SERVICES & SITE MAINTENANCE */}
-      <section id="services" className="relative py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
+      <section id="studio-offerings" className="relative py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
         <div className="max-w-3xl lg:max-w-none mb-16">
           <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Studio Offerings</div>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
@@ -2010,7 +2086,7 @@ export default function App({ page = 'home' }) {
         </div>
 
 {/* Retainer Plans Grid */}
-<div ref={carePlansRef} id="care-plans" tabIndex={-1} className="mb-8 scroll-mt-20 md:scroll-mt-28 xl:scroll-mt-20 focus:outline-none">
+<div ref={carePlansRef} id="site-maintenance" tabIndex={-1} className="mb-8 scroll-mt-20 md:scroll-mt-28 xl:scroll-mt-20 focus:outline-none">
   <h3 className="text-3xl sm:text-4xl font-bold mb-2">Site Maintenance Care Plans</h3>
   <p className={`text-sm ${activeTheme.textMuted} mb-8`}>
     Ongoing care for custom-built websites, WordPress sites and websites built by Iris & Oak.
@@ -2529,18 +2605,16 @@ export default function App({ page = 'home' }) {
             <h2 id="footer-studio-heading" className={`text-xs font-mono uppercase tracking-widest mb-3 ${activeTheme.textMuted}`}>Studio</h2>
             <ul className="space-y-2 text-xs font-mono">
               <li><a href="/portfolio" className={`hover:underline rounded ${FOCUS_RING}`}>Portfolio</a></li>
-              <li><a href={homeHref('#services')} className={`hover:underline rounded ${FOCUS_RING}`}>Studio Offerings</a></li>
+              <li><a href={homeHref('#studio-offerings')} className={`hover:underline rounded ${FOCUS_RING}`}>Studio Offerings</a></li>
               <li><a href={homeHref('#engineering')} className={`hover:underline rounded ${FOCUS_RING}`}>Engineering</a></li>
               <li className="flex flex-wrap items-center gap-2">
-                <button
-                  ref={partnershipOpenerRef}
-                  type="button"
-                  aria-haspopup="dialog"
-                  onClick={() => setIsPartnershipOpen(true)}
-                  className={`hover:underline rounded text-left ${FOCUS_RING}`}
+                <a
+                  href="/portfolio-partnership"
+                  aria-current={page === 'partnership' ? 'page' : undefined}
+                  className={`hover:underline rounded ${FOCUS_RING}`}
                 >
                   Portfolio Partnership
-                </button>
+                </a>
                 <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border ${activeTheme.badge}`}>
                   <span className="sr-only">Status: </span>{PARTNERSHIP_STATUS_LABELS[PARTNERSHIP_STATUS]}
                 </span>
@@ -2563,67 +2637,6 @@ export default function App({ page = 'home' }) {
           <p className={`mt-10 pt-6 border-t text-xs ${activeTheme.border} ${activeTheme.textMuted}`}>© {new Date().getFullYear()} Iris &amp; Oak</p>
         </div>
       </footer>
-
-      {/* PORTFOLIO PARTNERSHIP POPUP */}
-      {isPartnershipOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in motion-reduce:animate-none"
-          // Close on a backdrop click only when the press also started on the backdrop
-          onMouseDown={(e) => { partnershipBackdropPressRef.current = e.target === e.currentTarget; }}
-          onClick={(e) => {
-            if (partnershipBackdropPressRef.current && e.target === e.currentTarget) setIsPartnershipOpen(false);
-          }}
-        >
-          <div
-            ref={partnershipDialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="partnership-dialog-title"
-            className={`relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border p-6 md:p-8 shadow-2xl ${activeTheme.bg} ${activeTheme.border} ${activeTheme.text}`}
-          >
-            <button
-              type="button"
-              aria-label="Close Portfolio Partnership details"
-              onClick={() => setIsPartnershipOpen(false)}
-              className={`absolute top-5 right-5 p-2 rounded-full hover:bg-zinc-800/50 transition-colors ${FOCUS_RING}`}
-            >
-              <X size={20} aria-hidden="true" />
-            </button>
-
-            <h2 id="partnership-dialog-title" className="text-2xl font-bold mb-4 pr-10">Portfolio Partnership</h2>
-            <div className={`space-y-4 text-sm leading-relaxed ${activeTheme.textMuted}`}>
-              <p>
-                Each round, I offer a small number of independent businesses a complimentary website in return for featuring the finished project as a case study.
-              </p>
-              <p>
-                <strong className={activeTheme.text}>Current round: {PARTNERSHIP_STATUS_LABELS[PARTNERSHIP_STATUS]}.</strong>
-                {PARTNERSHIP_STATUS !== 'soon' && <> I’m working with <span className="whitespace-nowrap">{PARTNERSHIP_PLACES}</span> local businesses.</>}
-              </p>
-              <p>
-                Want to hear about the next round?{' '}
-                <a
-                  href={homeHref('#contact')}
-                  onClick={(e) => {
-                    if (!isHome) return; // follow the link to the enquiry form on the homepage
-                    e.preventDefault();
-                    preselectEnquiry({ pkg: 'Portfolio Partnership' });
-                    setIsPartnershipOpen(false);
-                    // After the popup closes (and returns focus), move on to the enquiry form
-                    requestAnimationFrame(() => {
-                      window.history.replaceState(null, '', '#contact');
-                      document.getElementById('contact')?.scrollIntoView();
-                      document.getElementById('enquiry-name')?.focus({ preventScroll: true });
-                    });
-                  }}
-                  className={`font-medium underline underline-offset-4 hover:opacity-70 rounded ${activeTheme.highlight} ${FOCUS_RING}`}
-                >
-                  Get in touch
-                </a>
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* DISPLAY SETTINGS DRAWER */}
       {isDrawerOpen && (

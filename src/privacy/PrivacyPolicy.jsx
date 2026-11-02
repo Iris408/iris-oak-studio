@@ -88,7 +88,7 @@ export default function PrivacyPolicy() {
             This Privacy Policy explains how Iris &amp; Oak collects, uses and handles personal information when you visit
             the website, submit an enquiry or become a client.
           </p>
-          {/* CONFIRM: publication date for this revision */}
+          {/* CONFIRM (pending): set to the date of the irisoak.dev domain switch */}
           <p className="text-sm text-zinc-400">Last updated: 27 October 2026</p>
         </div>
 
@@ -172,16 +172,15 @@ export default function PrivacyPolicy() {
             </p>
 
             <Provider name="Vercel">
-              {/* CONFIRM: the site is deployed on Vercel's Pro plan (no Vercel project settings are stored in this repository) */}
               <p>
                 The Iris &amp; Oak website is hosted on Vercel’s Pro plan. Vercel may process technical information as part of
                 hosting, securing and delivering the website, and it runs the server function that sends enquiry emails.
               </p>
-              {/* CONFIRM: Web Analytics is enabled for the Vercel project. Until it is, no analytics data is collected. */}
               <p>
                 Iris &amp; Oak also uses Vercel Web Analytics to understand how the website is used and to help improve its content,
                 performance and user experience. The analytics service provides aggregated website statistics such as page views,
-                referring websites, approximate geographic location, browser, operating system and device type. See section 8.
+                referring websites, approximate geographic location, browser, operating system and device type. You can opt out
+                using the analytics control in section 8.
               </p>
             </Provider>
 
@@ -198,7 +197,8 @@ export default function PrivacyPolicy() {
                 </li>
               </List>
               <p>The confirmation email is only sent after the notification to Iris &amp; Oak has been accepted for delivery.</p>
-              {/* CONFIRM: the account is on Resend's Free plan */}
+              {/* CONFIRM (pending verification): where Resend stores this data. The domain's Resend sending records point to
+                  eu-west-1 (Ireland); check the account/terms before stating a location. The Free plan is confirmed. */}
               <p>
                 Iris &amp; Oak uses Resend’s Free plan. On this plan, Resend states that it keeps the content of these emails, along
                 with delivery events and logs, for 30 days. It stores this information in the United States.
@@ -206,7 +206,8 @@ export default function PrivacyPolicy() {
             </Provider>
 
             <Provider name="Google Workspace">
-              {/* CONFIRM: the enquiry inbox (ENQUIRY_TO_EMAIL) is the Iris & Oak Google Workspace mailbox */}
+              {/* CONFIRM (pending verification): ENQUIRY_TO_EMAIL is contact@irisoak.dev. Google Workspace is live, but the
+                  Vercel environment value couldn't be checked from this repository. */}
               <p>
                 Enquiry notification emails are received and stored in the Iris &amp; Oak Google Workspace mailbox, where they are
                 kept for the period described in section 7.
@@ -235,12 +236,12 @@ export default function PrivacyPolicy() {
           </Section>
 
           <Section id="international" title="6. International processing">
+            {/* CONFIRM (pending verification): Resend's data location, as in section 5 */}
             <p>
               Vercel and Resend both state that their primary data processing takes place in the United States, and Google
               Workspace data may be processed in other countries. Information processed by these providers, including enquiry
               emails, is therefore likely to be processed outside the United Kingdom.
             </p>
-            {/* CONFIRM: depends on the Vercel Pro plan above */}
             <p>
               Vercel’s data processing terms apply to the Pro plan used for this website. They include the EU Standard
               Contractual Clauses and, for transfers from the United Kingdom, the UK International Data Transfer Addendum.
@@ -314,8 +315,8 @@ export default function PrivacyPolicy() {
             <p>This website saves a small amount of information in your browser’s local storage on this device:</p>
             <List>
               <li>
-                Your Studio Configurator preferences (colour theme, typography, text size and high-contrast setting), so the
-                homepage can remember how you like it displayed.
+                Any display settings you choose (colour theme, typography, text size and high-contrast setting), so the
+                website can remember how you like it displayed. Settings you haven’t changed follow your device.
               </li>
               <li>Your analytics choice, if you use the control below.</li>
             </List>

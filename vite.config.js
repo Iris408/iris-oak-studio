@@ -16,6 +16,10 @@ export default defineConfig({
         clientPortal: resolve(__dirname, 'client-portal.html'),
         // Privacy Policy, served at /privacy (see vercel.json cleanUrls)
         privacy: resolve(__dirname, 'privacy.html'),
+        // Portfolio Partnership, served at /portfolio-partnership
+        partnership: resolve(__dirname, 'portfolio-partnership.html'),
+        // Not-found page; Vercel serves 404.html for unmatched routes
+        notFound: resolve(__dirname, '404.html'),
       },
     },
   },
