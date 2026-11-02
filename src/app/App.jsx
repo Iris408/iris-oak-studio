@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Sliders, 
   ArrowUpRight, 
@@ -131,6 +131,28 @@ const loadSavedSettings = () => {
   return valid;
 };
 
+// Header dropdowns: close on Escape (returning focus to the button) or on a click outside.
+function useDropdownDismiss(isOpen, close, containerRef, buttonRef) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        close();
+        buttonRef.current?.focus();
+      }
+    };
+    const handlePointerDown = (e) => {
+      if (!containerRef.current?.contains(e.target)) close();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [isOpen, close, containerRef, buttonRef]);
+}
+
 // Tracks a media query such as the device's dark mode or contrast setting, including live changes.
 function useMediaQuery(query) {
   const [matches, setMatches] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(query).matches);
@@ -147,23 +169,41 @@ function useMediaQuery(query) {
 
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-// Portfolio groups: work for clients is kept separate from my own product builds.
-const PORTFOLIO_GROUPS = [
-  { kind: 'client', title: 'Client work' },
-  { kind: 'product', title: 'Portfolio builds' }
+// Portfolio categories, in Portfolio dropdown and /portfolio page order. A category with no projects is hidden.
+const PORTFOLIO_CATEGORIES = [
+  {
+    id: 'client-websites',
+    name: 'Client Websites',
+    description: 'Websites designed and built for founders and independent businesses'
+  },
+  {
+    id: 'web-apps-tools',
+    name: 'Web Apps & Tools',
+    description: 'Dashboards, booking systems and internal tools that simplify day-to-day work'
+  },
+  {
+    id: 'product-builds',
+    name: 'Product Builds',
+    description: 'Self-initiated products exploring real problems, from idea to working prototype'
+  },
+  {
+    id: 'concept-sites',
+    name: 'Concept Sites',
+    description: 'Design explorations, showing what is possible for different industries'
+  }
 ];
 
-// Portfolio projects. `kind` picks the group (PORTFOLIO_GROUPS); `eyebrow` reads "what it is · who it's for";
-// `status` (Demo / Prototype) shows under the title. `liveUrl` (client sites) and `demoUrl` (portfolio builds)
+// Portfolio projects. `category` is a PORTFOLIO_CATEGORIES id; on /portfolio it shows as the left image badge.
+// `status` (Demo / Prototype) is the right image badge. `eyebrow` (optional) names who the project is for.
+// `tags` fill the Tech Stack list in the project popup. `liveUrl` (client sites) and `demoUrl` (product builds)
 // add an external link when set. Only add client projects once they're complete and the client has approved featuring them.
 const SAMPLE_PROJECTS = [
   {
     id: 'kawari-company',
-    kind: 'client',
-    title: 'Kawari Company',
-    eyebrow: 'Client website · Safeguarding consultancy',
+    title: 'The Kawari Company',
+    category: 'client-websites',
     status: '',
-    liveUrl: 'https://kawaricompany.com',
+    liveUrl: 'https://www.kawaricompany.com',
     client: '',
     summary: 'A calm, minimalist first website built for a safeguarding consultancy with more than 25 years of experience: clear, credible and easy to get in touch.',
     tags: ['Next.js', 'TypeScript', 'CSS', 'React'],
@@ -174,13 +214,13 @@ const SAMPLE_PROJECTS = [
     },
     technicalExecution: 'Built with Next.js and React, with a responsive layout that adapts to different screen sizes.',
     image: '/images/kawari-company/homepage.png',
-    imageAlt: 'Kawari Company homepage: the headline ‘Expert advice. Impacting practice.’ beside a photo of a sunlit stone staircase.'
+    imageAlt: 'The Kawari Company homepage: the headline ‘Expert advice. Impacting practice.’ beside a photo of a sunlit stone staircase.'
   },
   {
     id: 'bloom',
-    kind: 'product',
     title: 'Bloom',
-    eyebrow: 'Portfolio build · Wellness & routines app',
+    eyebrow: 'Wellness & routines app',
+    category: 'product-builds',
     status: 'Demo',
     demoUrl: 'https://www.bloomapp.uk',
     client: '',
@@ -201,9 +241,9 @@ const SAMPLE_PROJECTS = [
   },
   {
     id: 'partspilot',
-    kind: 'product',
     title: 'PartsPilot',
-    eyebrow: 'Portfolio build · Inventory management',
+    eyebrow: 'Inventory management',
+    category: 'product-builds',
     status: 'Demo',
     demoUrl: 'https://www.partspilot.uk',
     client: '',
@@ -224,9 +264,9 @@ const SAMPLE_PROJECTS = [
   },
   {
     id: 'accesshub',
-    kind: 'product',
     title: 'AccessHub',
-    eyebrow: 'Portfolio build · Access management system',
+    eyebrow: 'Access management system',
+    category: 'product-builds',
     status: 'Demo',
     demoUrl: 'https://accesshub-iris408.vercel.app',
     client: '',
@@ -246,6 +286,16 @@ const SAMPLE_PROJECTS = [
     imageAlt: 'AccessHub sign-in page: the headline ‘A clearer view of who has access.’ above a diagram of admin, manager and viewer/auditor roles, beside a sign-in form.'
   }
 ];
+
+const projectsInCategory = (categoryId) => SAMPLE_PROJECTS.filter((project) => project.category === categoryId);
+const categoryName = (categoryId) => PORTFOLIO_CATEGORIES.find((category) => category.id === categoryId)?.name ?? '';
+// Categories with projects (dropdown and page sections)
+const VISIBLE_PORTFOLIO_CATEGORIES = PORTFOLIO_CATEGORIES.filter((category) => projectsInCategory(category.id).length > 0);
+// A category gets a filter pill only with at least two projects; the filter bar needs at least two such categories
+const FILTER_PORTFOLIO_CATEGORIES = VISIBLE_PORTFOLIO_CATEGORIES.filter((category) => projectsInCategory(category.id).length >= 2);
+const SHOW_PORTFOLIO_FILTERS = FILTER_PORTFOLIO_CATEGORIES.length >= 2;
+// Homepage "Recent Client Work"
+const CLIENT_WEBSITE_PROJECTS = projectsInCategory('client-websites');
 
 const CARE_PLANS = [
   {
@@ -762,7 +812,12 @@ const trimEnquiry = (details) => Object.fromEntries(Object.entries(details).map(
 // "Signature (£695)", "Smart Forms (from £450)"
 const packageLabel = (pkg) => `${pkg.name} (${pkg.prefix ? `${pkg.prefix} ` : ''}${pkg.price})`;
 
-export default function App() {
+// `page`: 'home' (index.html) or 'portfolio' (portfolio.html, served at /portfolio)
+export default function App({ page = 'home' }) {
+  const isHome = page === 'home';
+  // Links to homepage sections work from either page
+  const homeHref = (hash) => (isHome ? hash : `/${hash}`);
+
   // Display settings: the visitor's saved choices, otherwise their device settings (drawer state is not persisted)
   const [savedSettings, setSavedSettings] = useState(loadSavedSettings);
   const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
@@ -781,7 +836,8 @@ export default function App() {
   const studioTagline = 'I design and build high-precision websites and platforms, and provide ongoing care so you can scale with confidence.';
   const studioStatus = 'Now Booking Projects for Winter';
 
-  // Filtering state
+  // Filtering state (/portfolio)
+  const [activeCategory, setActiveCategory] = useState('all');
   const [selectedProject, setSelectedProject] = useState(null);
   
   // Enquiry form
@@ -799,6 +855,9 @@ export default function App() {
   // Studio Offerings tabs + header dropdown
   const [offeringTab, setOfferingTab] = useState('websites');
   const [isOfferingsMenuOpen, setIsOfferingsMenuOpen] = useState(false);
+  const [isPortfolioMenuOpen, setIsPortfolioMenuOpen] = useState(false);
+  const portfolioMenuRef = useRef(null);
+  const portfolioMenuButtonRef = useRef(null);
   const offeringsRef = useRef(null);
   const offeringTabRefs = useRef({});
   const offeringsMenuRef = useRef(null);
@@ -884,8 +943,36 @@ export default function App() {
     });
   };
 
+  // /portfolio: bring a category section into view (and focus its heading) for links such as /portfolio#product-builds
+  const showPortfolioCategory = (id, { focus = false } = {}) => {
+    if (!VISIBLE_PORTFOLIO_CATEGORIES.some((category) => category.id === id)) return;
+    setActiveCategory('all');
+    requestAnimationFrame(() => {
+      const heading = document.getElementById(`${id}-title`);
+      heading?.closest('section')?.scrollIntoView();
+      if (focus) heading?.focus({ preventScroll: true });
+    });
+  };
+
+  useEffect(() => {
+    if (isHome) return undefined;
+    const syncFromHash = () => showPortfolioCategory(window.location.hash.slice(1));
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
+    return () => window.removeEventListener('hashchange', syncFromHash);
+  }, [isHome]);
+
+  const handlePortfolioMenuSelect = (e, id) => {
+    setIsPortfolioMenuOpen(false);
+    if (isHome) return; // follow the link to /portfolio#id
+    e.preventDefault();
+    window.history.replaceState(null, '', `#${id}`);
+    showPortfolioCategory(id, { focus: true });
+  };
+
   // Support links such as /#web-apps by opening the matching tab.
   useEffect(() => {
+    if (!isHome) return undefined;
     const syncFromHash = () => {
       const id = window.location.hash.slice(1);
       if (OFFERING_CATEGORIES.some((c) => c.id === id)) showOffering(id);
@@ -895,29 +982,15 @@ export default function App() {
     return () => window.removeEventListener('hashchange', syncFromHash);
   }, []);
 
-  // Header dropdown: close on Escape (returning focus to its button) or on an outside click.
-  useEffect(() => {
-    if (!isOfferingsMenuOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setIsOfferingsMenuOpen(false);
-        offeringsMenuButtonRef.current?.focus();
-      }
-    };
-    const handlePointerDown = (e) => {
-      if (!offeringsMenuRef.current?.contains(e.target)) setIsOfferingsMenuOpen(false);
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handlePointerDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handlePointerDown);
-    };
-  }, [isOfferingsMenuOpen]);
+  const closeOfferingsMenu = useCallback(() => setIsOfferingsMenuOpen(false), []);
+  const closePortfolioMenu = useCallback(() => setIsPortfolioMenuOpen(false), []);
+  useDropdownDismiss(isOfferingsMenuOpen, closeOfferingsMenu, offeringsMenuRef, offeringsMenuButtonRef);
+  useDropdownDismiss(isPortfolioMenuOpen, closePortfolioMenu, portfolioMenuRef, portfolioMenuButtonRef);
 
   const handleOfferingsMenuSelect = (e, id) => {
-    e.preventDefault();
     setIsOfferingsMenuOpen(false);
+    if (!isHome) return; // follow the link to /#id
+    e.preventDefault();
     window.history.replaceState(null, '', `#${id}`);
     showOffering(id, { focusTab: true });
   };
@@ -939,7 +1012,7 @@ export default function App() {
   };
 
   // Portfolio card and popup actions: client sites open as "View project", portfolio builds as "See how it works"
-  const projectActionLabel = (project) => (project.kind === 'client' ? 'View project' : 'See how it works');
+  const projectActionLabel = (project) => (project.category === 'client-websites' ? 'View project' : 'See how it works');
 
   // "Visit live site ↗" for client sites, "View demo ↗" for portfolio builds; nothing without a URL
   const renderExternalProjectLink = (project, className = '') => {
@@ -956,6 +1029,67 @@ export default function App() {
         <span aria-hidden="true"> ↗</span>
         <span className="sr-only">: {project.title} (opens in a new tab)</span>
       </a>
+    );
+  };
+
+  // Project card for the homepage and /portfolio. `showCategory` adds the category badge (on /portfolio).
+  const renderProjectCard = (project, { headingLevel = 3, showCategory = false } = {}) => {
+    const Title = `h${headingLevel}`;
+    const badgeClass = `text-[11px] uppercase font-mono tracking-wider px-2 py-1 rounded border shadow-sm ${activeTheme.bg} ${activeTheme.text} ${activeTheme.border}`;
+    return (
+      <div
+        key={project.id}
+        className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[button:focus-visible]:outline has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-2 has-[button:focus-visible]:outline-indicator ${activeTheme.border} ${activeTheme.cardBg}`}
+      >
+        {/* Card Image. Badges use the theme's solid background and text colours so they stay readable over any screenshot. */}
+        <div className="relative aspect-video overflow-hidden bg-zinc-900">
+          <img
+            src={project.image}
+            alt={project.imageAlt}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
+          />
+          {showCategory && (
+            <div className="absolute top-3 left-3">
+              <span className={badgeClass}>{categoryName(project.category)}</span>
+            </div>
+          )}
+          {project.status && (
+            <div className="absolute top-3 right-3">
+              <span className={badgeClass}>{project.status}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Card Body */}
+        <div className="p-6">
+          {project.eyebrow && (
+            <p className={`text-[11px] font-mono uppercase tracking-widest mb-2 ${activeTheme.textMuted}`}>{project.eyebrow}</p>
+          )}
+          <Title className="text-xl font-bold group-hover:underline">{project.title}</Title>
+          {project.summary && (
+            <p className={`text-sm leading-relaxed mt-3 ${activeTheme.textMuted}`}>{project.summary}</p>
+          )}
+
+          {/* Actions. The project button's ::after covers the whole card, so the card stays clickable;
+              the external link sits above it (relative z-10) so it works on its own. */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-6 text-sm font-medium">
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={(e) => {
+                projectOpenerRef.current = e.currentTarget;
+                setSelectedProject(project);
+              }}
+              className="inline-flex items-center gap-1 text-left cursor-pointer focus:outline-none after:absolute after:inset-0 after:content-['']"
+            >
+              {projectActionLabel(project)}
+              <span className="sr-only">: {project.title}</span>
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
+            {renderExternalProjectLink(project, 'relative z-10')}
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -1215,14 +1349,53 @@ export default function App() {
 
           {/* Navigation Items */}
           <nav className={`hidden md:flex order-last xl:order-none w-full xl:w-auto justify-center items-center gap-8 pt-3 xl:pt-0 border-t xl:border-t-0 ${activeTheme.border} text-xs font-medium tracking-wide uppercase`}>
-            <a href="#portfolio" className="hover:opacity-70 transition-opacity">Portfolio</a>
+            <div ref={portfolioMenuRef} className="relative">
+              <button
+                ref={portfolioMenuButtonRef}
+                type="button"
+                aria-expanded={isPortfolioMenuOpen}
+                aria-controls="portfolio-menu"
+                onClick={() => {
+                  setIsOfferingsMenuOpen(false);
+                  setIsPortfolioMenuOpen((open) => !open);
+                }}
+                className={`inline-flex items-center gap-1 uppercase tracking-wide hover:opacity-70 transition-opacity rounded ${FOCUS_RING}`}
+              >
+                Portfolio
+                <ChevronDown size={14} aria-hidden="true" className={`transition-transform ${isPortfolioMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isPortfolioMenuOpen && (
+                <ul
+                  id="portfolio-menu"
+                  className={`absolute left-1/2 -translate-x-1/2 top-full mt-3 w-72 py-2 rounded-lg border shadow-xl animate-fade-in motion-reduce:animate-none ${activeTheme.bg} ${activeTheme.border} ${activeTheme.text}`}
+                >
+                  {VISIBLE_PORTFOLIO_CATEGORIES.map((category) => (
+                    <li key={category.id}>
+                      <a
+                        href={`/portfolio#${category.id}`}
+                        onClick={(e) => handlePortfolioMenuSelect(e, category.id)}
+                        className={`block px-4 py-2.5 hover:opacity-70 transition-opacity ${FOCUS_RING}`}
+                      >
+                        <span className="block">{category.name}</span>
+                        {category.description && (
+                          <span className={`block mt-0.5 text-[11px] font-normal normal-case tracking-normal ${activeTheme.textMuted}`}>{category.description}</span>
+                        )}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <div ref={offeringsMenuRef} className="relative">
               <button
                 ref={offeringsMenuButtonRef}
                 type="button"
                 aria-expanded={isOfferingsMenuOpen}
                 aria-controls="offerings-menu"
-                onClick={() => setIsOfferingsMenuOpen((open) => !open)}
+                onClick={() => {
+                  setIsPortfolioMenuOpen(false);
+                  setIsOfferingsMenuOpen((open) => !open);
+                }}
                 className={`inline-flex items-center gap-1 uppercase tracking-wide hover:opacity-70 transition-opacity rounded ${FOCUS_RING}`}
               >
                 Studio Offerings
@@ -1236,7 +1409,7 @@ export default function App() {
                   {OFFERINGS_MENU.map((item) => (
                     <li key={item.id}>
                       <a
-                        href={`#${item.id}`}
+                        href={homeHref(`#${item.id}`)}
                         onClick={(e) => handleOfferingsMenuSelect(e, item.id)}
                         className={`block px-4 py-2.5 whitespace-nowrap hover:opacity-70 transition-opacity ${FOCUS_RING}`}
                       >
@@ -1247,7 +1420,7 @@ export default function App() {
                 </ul>
               )}
             </div>
-            <a href="#engineering" className="hover:opacity-70 transition-opacity">Engineering</a>
+            <a href={homeHref('#engineering')} className="hover:opacity-70 transition-opacity">Engineering</a>
           </nav>
 
           {/* Action Controls */}
@@ -1268,7 +1441,7 @@ export default function App() {
             </button>
             
             <a
-              href="#contact"
+              href={homeHref('#contact')}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${activeTheme.accent}`}
             >
               Enquire
@@ -1278,6 +1451,7 @@ export default function App() {
       </header>
 
       <main id="main-content" tabIndex={-1} className="focus:outline-none">
+      {isHome && (<>
       {/* DYNAMIC STUDIO HER0 SECTION */}
       <section className="relative isolate pt-20 pb-16 md:pt-32 md:pb-24 border-b border-dashed border-zinc-800/40 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Decorative slow-orbit background (behind content, non-interactive, static with reduced motion) */}
@@ -1318,7 +1492,7 @@ export default function App() {
               <ArrowUpRight size={16} />
             </a>
             <a
-              href="#portfolio"
+              href="/portfolio"
               className={`inline-flex items-center gap-2 px-6 py-3 rounded text-sm font-medium border transition-all ${activeTheme.border} ${activeTheme.cardBg} hover:border-zinc-500`}
             >
               <span>Explore Portfolio</span>
@@ -1351,87 +1525,80 @@ export default function App() {
         </div>
       </section>
 
-      {/* SECTION 1: SELECTED WORK & CASE STUDIES */}
+      {/* SECTION 1: RECENT CLIENT WORK (client websites only; everything else is on /portfolio) */}
       <section id="portfolio" className="scroll-mt-16 md:scroll-mt-28 xl:scroll-mt-16 py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
-        <div className="mb-12">
-          <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Portfolio / Archive</div>
-          <h2 className="text-3xl font-bold tracking-tight">Selected Studio Projects</h2>
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <div>
+            <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Portfolio / Archive</div>
+            <h2 className="text-3xl font-bold tracking-tight">Recent Client Work</h2>
+          </div>
+          <a href="/portfolio" className={`inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline rounded ${FOCUS_RING}`}>
+            View full portfolio
+            <ChevronRight size={14} aria-hidden="true" />
+          </a>
         </div>
-
-        {/* Projects grid, one per group (a group with no projects is left out) */}
-        <div className="space-y-16">
-          {PORTFOLIO_GROUPS.map((group) => {
-            const projects = SAMPLE_PROJECTS.filter((project) => project.kind === group.kind);
-            if (projects.length === 0) return null;
-            return (
-              <div key={group.kind} role="group" aria-labelledby={`portfolio-${group.kind}-title`}>
-                <h3 id={`portfolio-${group.kind}-title`} className={`text-xs uppercase font-mono tracking-widest font-bold mb-6 ${activeTheme.textMuted}`}>{group.title}</h3>
-                <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
-                  {projects.map((project) => (
-                    <div
-                      key={project.id}
-                      className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[button:focus-visible]:outline has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-2 has-[button:focus-visible]:outline-indicator ${activeTheme.border} ${activeTheme.cardBg}`}
-                    >
-                      {/* Card Image: no overlays, so the screenshot stays fully visible */}
-                      <div className="relative aspect-video overflow-hidden bg-zinc-900">
-                        <img
-                          src={project.image}
-                          alt={project.imageAlt}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
-                        />
-                      </div>
-
-                      {/* Card Body */}
-                      <div className="p-6">
-                        <p className={`text-[11px] font-mono uppercase tracking-widest mb-2 ${activeTheme.textMuted}`}>{project.eyebrow}</p>
-                        <h4 className="text-xl font-bold group-hover:underline">{project.title}</h4>
-                        {project.status && (
-                          <p className={`text-xs font-mono uppercase tracking-wider mt-1 ${activeTheme.textMuted}`}>{project.status}</p>
-                        )}
-                        {project.summary && (
-                          <p className={`text-sm leading-relaxed mt-3 ${project.tags.length ? 'mb-6' : ''} ${activeTheme.textMuted}`}>
-                            {project.summary}
-                          </p>
-                        )}
-
-                        {/* Tech Tags */}
-                        {project.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-4 border-t border-zinc-800/30">
-                          {project.tags.map((tag) => (
-                            <span key={tag} className={`text-[11px] font-mono px-2 py-0.5 rounded ${activeTheme.badge}`}>
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        )}
-
-                        {/* Actions. The project button's ::after covers the whole card, so the card stays clickable;
-                            the external link sits above it (relative z-10) so it works on its own. */}
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-6 text-sm font-medium">
-                          <button
-                            type="button"
-                            aria-haspopup="dialog"
-                            onClick={(e) => {
-                              projectOpenerRef.current = e.currentTarget;
-                              setSelectedProject(project);
-                            }}
-                            className="inline-flex items-center gap-1 text-left cursor-pointer focus:outline-none after:absolute after:inset-0 after:content-['']"
-                          >
-                            {projectActionLabel(project)}
-                            <span className="sr-only">: {project.title}</span>
-                            <ChevronRight size={14} aria-hidden="true" />
-                          </button>
-                          {renderExternalProjectLink(project, 'relative z-10')}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
+          {CLIENT_WEBSITE_PROJECTS.map((project) => renderProjectCard(project))}
         </div>
       </section>
+      </>)}
+
+      {/* PORTFOLIO PAGE (/portfolio): one section per category that has projects */}
+      {!isHome && (
+      <div className="pt-16 pb-20 md:pt-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <div>
+            <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Portfolio / Archive</div>
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">Portfolio</h1>
+          </div>
+
+          {/* Category Filter Pills (only categories with at least two projects, and only when two or more qualify) */}
+          {SHOW_PORTFOLIO_FILTERS && (
+          <div role="group" aria-label="Filter projects" className="flex flex-wrap gap-2">
+            {[{ id: 'all', name: 'All' }, ...FILTER_PORTFOLIO_CATEGORIES].map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                aria-pressed={activeCategory === category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={`px-3 py-2 text-xs rounded border transition-all ${FOCUS_RING} ${
+                  activeCategory === category.id
+                    ? `${activeTheme.accent} border-transparent`
+                    : `${activeTheme.cardBg} ${activeTheme.border} ${activeTheme.textMuted} hover:opacity-80`
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+          )}
+        </div>
+
+        {/* Announces how many projects the filter shows */}
+        {SHOW_PORTFOLIO_FILTERS && (
+        <p role="status" className="sr-only">
+          {(() => {
+            const count = activeCategory === 'all' ? SAMPLE_PROJECTS.length : projectsInCategory(activeCategory).length;
+            return `Showing ${count} ${count === 1 ? 'project' : 'projects'}`;
+          })()}
+        </p>
+        )}
+
+        <div className="space-y-20">
+          {VISIBLE_PORTFOLIO_CATEGORIES
+            .filter((category) => activeCategory === 'all' || category.id === activeCategory)
+            .map((category) => (
+            <section key={category.id} id={category.id} aria-labelledby={`${category.id}-title`} className="scroll-mt-20 md:scroll-mt-32 xl:scroll-mt-20">
+              <h2 id={`${category.id}-title`} tabIndex={-1} className="text-2xl font-bold tracking-tight focus:outline-none">{category.name}</h2>
+              {category.description && <p className={`text-sm mt-2 ${activeTheme.textMuted}`}>{category.description}</p>}
+              <div className="grid gap-8 grid-cols-1 md:grid-cols-2 mt-8">
+                {projectsInCategory(category.id).map((project) => renderProjectCard(project, { showCategory: true }))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </div>
+      )}
 
       {/* PROJECT DEEP DIVE MODAL */}
       {selectedProject && (
@@ -1461,7 +1628,9 @@ export default function App() {
             </button>
 
             <div className="mb-6 pr-12">
-              <p className={`text-xs font-mono uppercase tracking-widest ${activeTheme.textMuted}`}>{selectedProject.eyebrow}</p>
+              {selectedProject.eyebrow && (
+                <p className={`text-xs font-mono uppercase tracking-widest ${activeTheme.textMuted}`}>{selectedProject.eyebrow}</p>
+              )}
               <h2 id="project-dialog-title" className="text-2xl sm:text-3xl font-bold mt-2 mb-1">{selectedProject.title}</h2>
               {selectedProject.status && (
                 <p className={`text-xs font-mono uppercase tracking-wider ${activeTheme.textMuted}`}>{selectedProject.status}</p>
@@ -1517,6 +1686,21 @@ export default function App() {
               </div>
               )}
 
+              {/* Tech Stack: native <details>, so it opens with Enter/Space and announces its expanded state */}
+              {selectedProject.tags.length > 0 && (
+              <details className={`group/stack rounded border ${activeTheme.border}`}>
+                <summary className={`flex items-center justify-between gap-2 px-4 py-3 rounded cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm font-mono uppercase tracking-wider font-bold ${FOCUS_RING}`}>
+                  Tech Stack
+                  <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open/stack:rotate-180 motion-reduce:transition-none" />
+                </summary>
+                <ul className="flex flex-wrap gap-2 px-4 pb-4">
+                  {selectedProject.tags.map((tag) => (
+                    <li key={tag} className={`text-xs font-mono px-2 py-1 rounded ${activeTheme.badge}`}>{tag}</li>
+                  ))}
+                </ul>
+              </details>
+              )}
+
               <div className="pt-6 border-t border-zinc-800/40 flex justify-end gap-3">
                 <button
                   onClick={() => setSelectedProject(null)}
@@ -1525,7 +1709,7 @@ export default function App() {
                   Close
                 </button>
                 <a
-                  href="#contact"
+                  href={homeHref('#contact')}
                   onClick={() => setSelectedProject(null)}
                   className={`px-4 py-2 text-xs font-medium rounded ${activeTheme.accent}`}
                 >
@@ -1537,6 +1721,7 @@ export default function App() {
         </div>
       )}
 
+      {isHome && (<>
       {/* SECTION 2: SERVICES & SITE MAINTENANCE */}
       <section id="services" className="relative py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-zinc-800/20">
         <div className="max-w-3xl lg:max-w-none mb-16">
@@ -2180,6 +2365,7 @@ export default function App() {
         </div>
         </div>
       </section>
+      </>)}
       </main>
 
       {/* FOOTER */}
@@ -2204,9 +2390,9 @@ export default function App() {
           <nav aria-labelledby="footer-studio-heading">
             <h2 id="footer-studio-heading" className={`text-xs font-mono uppercase tracking-widest mb-3 ${activeTheme.textMuted}`}>Studio</h2>
             <ul className="space-y-2 text-xs font-mono">
-              <li><a href="#portfolio" className={`hover:underline rounded ${FOCUS_RING}`}>Portfolio</a></li>
-              <li><a href="#services" className={`hover:underline rounded ${FOCUS_RING}`}>Studio Offerings</a></li>
-              <li><a href="#engineering" className={`hover:underline rounded ${FOCUS_RING}`}>Engineering</a></li>
+              <li><a href="/portfolio" className={`hover:underline rounded ${FOCUS_RING}`}>Portfolio</a></li>
+              <li><a href={homeHref('#services')} className={`hover:underline rounded ${FOCUS_RING}`}>Studio Offerings</a></li>
+              <li><a href={homeHref('#engineering')} className={`hover:underline rounded ${FOCUS_RING}`}>Engineering</a></li>
               <li className="flex flex-wrap items-center gap-2">
                 <button
                   ref={partnershipOpenerRef}
@@ -2228,7 +2414,7 @@ export default function App() {
           <div>
             <h2 className={`text-xs font-mono uppercase tracking-widest mb-3 ${activeTheme.textMuted}`}>Contact</h2>
             <ul className="space-y-2 text-xs font-mono">
-              <li><a href="#contact" className={`hover:underline rounded ${FOCUS_RING}`}>Enquire</a></li>
+              <li><a href={homeHref('#contact')} className={`hover:underline rounded ${FOCUS_RING}`}>Enquire</a></li>
               <li><a href={`mailto:${CONTACT_EMAIL}`} className={`hover:underline rounded break-all ${FOCUS_RING}`}>{CONTACT_EMAIL}</a></li>
               <li><a href="/privacy" className={`hover:underline rounded ${FOCUS_RING}`}>Privacy</a></li>
             </ul>
@@ -2274,8 +2460,9 @@ export default function App() {
               <p>
                 Want to hear about the next round?{' '}
                 <a
-                  href="#contact"
+                  href={homeHref('#contact')}
                   onClick={(e) => {
+                    if (!isHome) return; // follow the link to the enquiry form on the homepage
                     e.preventDefault();
                     preselectEnquiry({ pkg: 'Portfolio Partnership' });
                     setIsPartnershipOpen(false);

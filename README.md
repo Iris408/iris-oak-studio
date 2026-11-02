@@ -27,6 +27,7 @@ Start the development server:
 ## Project structure
 
 - `src/app/` — main studio website
+- `src/portfolio/` — full portfolio page (`/portfolio`), rendered by the same app
 - `src/care-report/` — standalone Website Care Report sample
 - `src/client-portal/` — standalone Client Portal Dashboard sample
 - `public/` — static assets, including fonts and images

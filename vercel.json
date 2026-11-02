@@ -1,3 +1,7 @@
 {
-  "cleanUrls": true
+  "cleanUrls": true,
+  "redirects": [
+    { "source": "/work", "destination": "/portfolio", "permanent": true },
+    { "source": "/work/:path*", "destination": "/portfolio", "permanent": true }
+  ]
 }
