@@ -88,8 +88,8 @@ export default function PrivacyPolicy() {
             This Privacy Policy explains how Iris &amp; Oak collects, uses and handles personal information when you visit
             the website, submit an enquiry or become a client.
           </p>
-          {/* CONFIRM (pending): set to the date of the irisoak.dev domain switch */}
-          <p className="text-sm text-zinc-400">Last updated: 27 October 2026</p>
+          {/* Launch date of the irisoak.dev domain switch; update this line if the switch happens on a different day */}
+          <p className="text-sm text-zinc-400">Last updated: 2 November 2026</p>
         </div>
 
         <div className="space-y-12 text-sm sm:text-base leading-relaxed">
@@ -197,20 +197,21 @@ export default function PrivacyPolicy() {
                 </li>
               </List>
               <p>The confirmation email is only sent after the notification to Iris &amp; Oak has been accepted for delivery.</p>
-              {/* CONFIRM (pending verification): where Resend stores this data. The domain's Resend sending records point to
-                  eu-west-1 (Ireland); check the account/terms before stating a location. The Free plan is confirmed. */}
+              {/* CONFIRM (pending verification): where Resend stores this data. Deliberately not stated until verified (the
+                  domain's Resend sending records point to eu-west-1, Ireland). The Free plan is confirmed. */}
               <p>
                 Iris &amp; Oak uses Resend’s Free plan. On this plan, Resend states that it keeps the content of these emails, along
-                with delivery events and logs, for 30 days. It stores this information in the United States.
+                with delivery events and logs, for 30 days. Where and how Resend processes this information is described in its
+                published privacy terms.
               </p>
             </Provider>
 
             <Provider name="Google Workspace">
               {/* CONFIRM (pending verification): ENQUIRY_TO_EMAIL is contact@irisoak.dev. Google Workspace is live, but the
-                  Vercel environment value couldn't be checked from this repository. */}
+                  Vercel environment value couldn't be checked from this repository, so the page doesn't name the address. */}
               <p>
-                Enquiry notification emails are received and stored in the Iris &amp; Oak Google Workspace mailbox, where they are
-                kept for the period described in section 7.
+                Enquiry notification emails are delivered to a Google Workspace mailbox used by Iris &amp; Oak, where they are kept
+                for the period described in section 7.
               </p>
             </Provider>
 
@@ -236,30 +237,24 @@ export default function PrivacyPolicy() {
           </Section>
 
           <Section id="international" title="6. International processing">
-            {/* CONFIRM (pending verification): Resend's data location, as in section 5 */}
+            {/* CONFIRM (pending verification): providers' data locations, including Resend's (see section 5). No specific
+                countries are stated until verified. */}
             <p>
-              Vercel and Resend both state that their primary data processing takes place in the United States, and Google
-              Workspace data may be processed in other countries. Information processed by these providers, including enquiry
-              emails, is therefore likely to be processed outside the United Kingdom.
+              Vercel, Resend and Google may process information, including enquiry emails, outside the United Kingdom. Where and
+              how each provider processes personal information is described in its published privacy and data processing terms.
             </p>
             <p>
-              Vercel’s data processing terms apply to the Pro plan used for this website. They include the EU Standard
-              Contractual Clauses and, for transfers from the United Kingdom, the UK International Data Transfer Addendum.
-            </p>
-            <p>
-              Resend’s data processing terms apply to every Resend account, including the Free plan used by Iris &amp; Oak. Resend
-              states that transfers from the United Kingdom are covered by the UK Addendum to the EU Standard Contractual Clauses.
+              These published terms also describe the safeguards each provider uses when personal information is transferred
+              internationally.
             </p>
             {/*
-              CONFIRM: Check that the Google Workspace data processing terms have been accepted in the Admin console
-              (Account > Account settings > Legal and compliance). Until then, the sentence below describes Google's
-              published terms, not a confirmed safeguard for the Iris & Oak account.
+              CONFIRM (pending verification): check that the Google Workspace data processing terms have been accepted in the
+              Admin console (Account > Account settings > Legal and compliance). Until then, the sentence below refers only to
+              Google's published terms, not a confirmed safeguard for the Iris & Oak account.
             */}
             <p>
-              Google states that Google Workspace data may be processed in any country where Google or its subprocessors maintain
-              facilities. Google’s published data processing terms state that transfers of UK personal data to the United States
-              rely on Google’s certification to the UK Extension to the EU-U.S. Data Privacy Framework, with Standard Contractual
-              Clauses provided for where no such alternative transfer solution applies.
+              For Google Workspace, Google’s published privacy and data processing terms describe where Google Workspace data may be
+              processed and how international transfers are handled.
             </p>
             <p>
               Where personal information is transferred internationally by other providers, appropriate safeguards will be used
@@ -273,8 +268,8 @@ export default function PrivacyPolicy() {
               section 5.
             </p>
             <p>
-              Enquiry emails for general enquiries that do not become client projects will be deleted from the Iris &amp; Oak
-              Google Workspace mailbox no later than 9 months after the last meaningful communication, unless there is a
+              Enquiry emails for general enquiries that do not become client projects will be deleted from the Google Workspace
+              mailbox that receives them no later than 9 months after the last meaningful communication, unless there is a
               legitimate reason to retain the information for longer.
             </p>
             <p>
