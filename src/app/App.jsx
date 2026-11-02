@@ -10,6 +10,9 @@ import {
   Layout, 
   Server, 
   ChevronRight, 
+  ChevronLeft,
+  Pause,
+  Play,
   X, 
   Check, 
   Clock,
@@ -773,7 +776,6 @@ function useDialogFocus(isOpen, dialogRef, onClose, returnFocusRef) {
 
 // --- Footer details ---
 const STUDIO_AVAILABILITY = 'Booking Projects for Winter';
-const CONTACT_EMAIL = 'contact@irisoak.dev';
 
 // Portfolio Partnership round status: 'open' | 'filled' | 'soon'
 const PARTNERSHIP_STATUS = 'open';
@@ -811,6 +813,111 @@ const trimEnquiry = (details) => Object.fromEntries(Object.entries(details).map(
 
 // "Signature (£695)", "Smart Forms (from £450)"
 const packageLabel = (pkg) => `${pkg.name} (${pkg.prefix ? `${pkg.prefix} ` : ''}${pkg.price})`;
+
+// --- PORTFOLIO CAROUSEL ---
+// Categories with at least this many projects loop as a carousel on /portfolio; smaller ones stay a static grid.
+const CAROUSEL_MIN_PROJECTS = 3;
+const CAROUSEL_INTERVAL_MS = 5000;
+
+// Two cards at a time from md, one on phones. The highlight (the card's hover look) moves to the next project every
+// few seconds and the track slides when needed, looping back to the start. Automatic movement pauses on hover,
+// keyboard focus or the pause button, and is off entirely (with no highlight) when the visitor prefers reduced motion.
+function ProjectCarousel({ id, label, projects, renderCard, controlClass, focusRing }) {
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const twoUp = useMediaQuery('(min-width: 768px)');
+  const [active, setActive] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const [hasFocus, setHasFocus] = useState(false);
+  const [isStopped, setIsStopped] = useState(false);
+  const [moved, setMoved] = useState(false); // only announce changes the visitor makes
+  const count = projects.length;
+  const visible = twoUp ? 2 : 1;
+  const autoplay = !reducedMotion && !isStopped;
+  const running = autoplay && !isHovered && !hasFocus;
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') setActive((index) => (index + 1) % count);
+    }, CAROUSEL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [running, count]);
+
+  const step = (direction) => {
+    setMoved(true);
+    setActive((index) => (index + direction + count) % count);
+  };
+
+  // First visible card. It only changes when the active card would be out of view, so on desktop the highlight
+  // moves across the visible pair before the track slides. Percentages are of the track's width (= the viewport).
+  const startRef = useRef(0);
+  let start = startRef.current;
+  if (active < start) start = active;
+  else if (active > start + visible - 1) start = active - visible + 1;
+  start = Math.max(0, Math.min(start, count - visible));
+  startRef.current = start;
+  const offset = twoUp ? `calc(${-start} * ((100% - 2rem) / 2 + 2rem))` : `calc(${-start} * (100% + 2rem))`;
+  const buttonClass = `inline-flex items-center justify-center w-10 h-10 rounded-full border transition-opacity hover:opacity-80 ${controlClass} ${focusRing}`;
+
+  return (
+    <div
+      role="region"
+      aria-roledescription="carousel"
+      aria-label={label}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocus={() => setHasFocus(true)}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setHasFocus(false); }}
+    >
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <span aria-hidden="true" className="text-xs font-mono mr-2">{active + 1} / {count}</span>
+        {!reducedMotion && (
+          <button
+            type="button"
+            onClick={() => setIsStopped((stopped) => !stopped)}
+            aria-label={isStopped ? 'Start automatic scrolling' : 'Pause automatic scrolling'}
+            className={buttonClass}
+          >
+            {isStopped ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
+          </button>
+        )}
+        <button type="button" onClick={() => step(-1)} aria-label="Previous project" aria-controls={`${id}-track`} className={buttonClass}>
+          <ChevronLeft size={18} aria-hidden="true" />
+        </button>
+        <button type="button" onClick={() => step(1)} aria-label="Next project" aria-controls={`${id}-track`} className={buttonClass}>
+          <ChevronRight size={18} aria-hidden="true" />
+        </button>
+      </div>
+
+      {/* Padding leaves room for the highlight's lift and shadow; scrollLeft is pinned so focus can't scroll the clipped track */}
+      <div className="-mx-4 -my-6 px-4 py-6 overflow-hidden" onScroll={(e) => { e.currentTarget.scrollLeft = 0; }}>
+        <div
+          id={`${id}-track`}
+          className="flex gap-8 transition-transform duration-700 ease-out motion-reduce:transition-none"
+          style={{ transform: `translateX(${offset})` }}
+        >
+          {projects.map((project, index) => (
+            <div
+              key={project.id}
+              role="group"
+              aria-roledescription="slide"
+              aria-label={`${index + 1} of ${count}`}
+              className="grid shrink-0 basis-full md:basis-[calc((100%-2rem)/2)]"
+              // Tabbing into a card that's out of view brings it into view
+              onFocus={() => setActive(index)}
+            >
+              {renderCard(project, { highlighted: !reducedMotion && index === active })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="sr-only" aria-live={moved && !running ? 'polite' : 'off'}>
+        {`${projects[active].title}, project ${active + 1} of ${count}`}
+      </p>
+    </div>
+  );
+}
 
 // `page`: 'home' (index.html) or 'portfolio' (portfolio.html, served at /portfolio)
 export default function App({ page = 'home' }) {
@@ -1033,20 +1140,21 @@ export default function App({ page = 'home' }) {
   };
 
   // Project card for the homepage and /portfolio. `showCategory` adds the category badge (on /portfolio).
-  const renderProjectCard = (project, { headingLevel = 3, showCategory = false } = {}) => {
+  // `highlighted` gives the card its hover look (used by the carousel for the active project).
+  const renderProjectCard = (project, { headingLevel = 3, showCategory = false, highlighted = false } = {}) => {
     const Title = `h${headingLevel}`;
     const badgeClass = `text-[11px] uppercase font-mono tracking-wider px-2 py-1 rounded border shadow-sm ${activeTheme.bg} ${activeTheme.text} ${activeTheme.border}`;
     return (
       <div
         key={project.id}
-        className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[button:focus-visible]:outline has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-2 has-[button:focus-visible]:outline-indicator ${activeTheme.border} ${activeTheme.cardBg}`}
+        className={`group relative cursor-pointer rounded-lg border overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 motion-reduce:hover:translate-y-0 has-[button:focus-visible]:outline has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-2 has-[button:focus-visible]:outline-indicator ${highlighted ? 'shadow-xl -translate-y-1' : ''} ${activeTheme.border} ${activeTheme.cardBg}`}
       >
         {/* Card Image. Badges use the theme's solid background and text colours so they stay readable over any screenshot. */}
         <div className="relative aspect-video overflow-hidden bg-zinc-900">
           <img
             src={project.image}
             alt={project.imageAlt}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
+            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100 ${highlighted ? 'scale-105' : ''}`}
           />
           {showCategory && (
             <div className="absolute top-3 left-3">
@@ -1591,9 +1699,22 @@ export default function App({ page = 'home' }) {
             <section key={category.id} id={category.id} aria-labelledby={`${category.id}-title`} className="scroll-mt-20 md:scroll-mt-32 xl:scroll-mt-20">
               <h2 id={`${category.id}-title`} tabIndex={-1} className="text-2xl font-bold tracking-tight focus:outline-none">{category.name}</h2>
               {category.description && <p className={`text-sm mt-2 ${activeTheme.textMuted}`}>{category.description}</p>}
-              <div className="grid gap-8 grid-cols-1 md:grid-cols-2 mt-8">
-                {projectsInCategory(category.id).map((project) => renderProjectCard(project, { showCategory: true }))}
-              </div>
+              {projectsInCategory(category.id).length >= CAROUSEL_MIN_PROJECTS ? (
+                <div className="mt-4">
+                  <ProjectCarousel
+                    id={category.id}
+                    label={`${category.name} projects`}
+                    projects={projectsInCategory(category.id)}
+                    renderCard={(project, options) => renderProjectCard(project, { ...options, showCategory: true })}
+                    controlClass={`${activeTheme.border} ${activeTheme.cardBg} ${activeTheme.text}`}
+                    focusRing={FOCUS_RING}
+                  />
+                </div>
+              ) : (
+                <div className="grid gap-8 grid-cols-1 md:grid-cols-2 mt-8">
+                  {projectsInCategory(category.id).map((project) => renderProjectCard(project, { showCategory: true }))}
+                </div>
+              )}
             </section>
           ))}
         </div>
@@ -2383,7 +2504,6 @@ export default function App({ page = 'home' }) {
             <p className={`text-xs ${activeTheme.textMuted}`}>
               Designed, Engineered, Cared for.
             </p>
-            <span className={`inline-block text-[10px] px-2 py-0.5 rounded border ${activeTheme.badge}`}>© {new Date().getFullYear()} Iris &amp; Oak</span>
           </div>
 
           {/* Studio */}
@@ -2415,10 +2535,14 @@ export default function App({ page = 'home' }) {
             <h2 className={`text-xs font-mono uppercase tracking-widest mb-3 ${activeTheme.textMuted}`}>Contact</h2>
             <ul className="space-y-2 text-xs font-mono">
               <li><a href={homeHref('#contact')} className={`hover:underline rounded ${FOCUS_RING}`}>Enquire</a></li>
-              <li><a href={`mailto:${CONTACT_EMAIL}`} className={`hover:underline rounded break-all ${FOCUS_RING}`}>{CONTACT_EMAIL}</a></li>
               <li><a href="/privacy" className={`hover:underline rounded ${FOCUS_RING}`}>Privacy</a></li>
             </ul>
           </div>
+        </div>
+
+        {/* Copyright: last line of the page */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className={`mt-10 pt-6 border-t text-xs ${activeTheme.border} ${activeTheme.textMuted}`}>© {new Date().getFullYear()} Iris &amp; Oak</p>
         </div>
       </footer>
 
