@@ -16,6 +16,22 @@ const NEEDS = ['Websites', 'Integrations', 'Business tools', 'Web apps', 'Site m
 const LAUNCH_OPTIONS = ['ASAP', 'Within a month', '1–3 months', 'Flexible'];
 const BUDGET_OPTIONS = ['Under £1,000', '£1,000–£5,000', '£5,000–£15,000', '£15,000+', 'Not sure yet'];
 const MAX_LENGTH = { name: 100, business: 200, email: 254, message: 5000, package: 200 };
+// Published Resend template for the visitor confirmation (variables: name, serviceName)
+const CONFIRMATION_TEMPLATE_ID = 'c7a0c951-cdc4-449d-a1ef-0915a94a967e';
+// Service names the confirmation may mention. The form sends package labels such as "Signature (£695)" or
+// "Core maintenance plan (£…/month)"; only the matching name below is used, never the submitted text.
+const PACKAGE_SERVICE_NAMES = [
+  'Foundation', 'Signature', 'Bespoke',
+  'Essential Integration', 'Smart Forms', 'Connected System',
+  'Single Automation', 'Workflow Pack', 'Operations Toolkit',
+  'Discovery', 'Signature App', 'Bespoke App', 'Custom Build',
+  'Site Check-up', 'Core maintenance plan', 'Growth maintenance plan', 'Priority maintenance plan',
+  'Portfolio Partnership'
+];
+const confirmationServiceName = ({ package: pkg, needs }) =>
+  PACKAGE_SERVICE_NAMES.find((name) => pkg === name || pkg.startsWith(`${name} (`)) ||
+  needs.join(', ') || // already limited to NEEDS
+  'Custom Project';
 
 const clean = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 // Single-line fields must not contain line breaks (keeps the subject and summary tidy)
@@ -114,21 +130,23 @@ export default async function handler(req, res) {
   if (!notified) return res.status(502).json({ ok: false, error: 'Enquiry could not be sent' });
 
   // 2. Confirmation to the visitor, sent only once the studio notification was accepted.
-  // Fixed wording with none of the submitted content, so the form can't be used to send
-  // arbitrary messages to other people's addresses.
+  // The address is unverified, so the email carries no free text from the form: a generic greeting
+  // and a service name from the server-side lists, so the form can't be used to send arbitrary
+  // messages to other people's addresses. reply_to here takes precedence over the template's default.
   const confirmationSent = await sendEmail(
     {
       from: ENQUIRY_FROM_EMAIL,
       to: [enquiry.email],
+      reply_to: ENQUIRY_TO_EMAIL,
       template: {
-        id: 'c7a0c951-cdc4-449d-a1ef-0915a94a967e',
+        id: CONFIRMATION_TEMPLATE_ID,
         variables: {
-          name: enquiry.name,
-          serviceName:
-            enquiry.package || enquiry.needs.join(', ') || 'Custom Project'
+          name: 'there',
+          serviceName: confirmationServiceName(enquiry)
         }
       }
-    }
+    },
+    'enquiry confirmation'
   );
 
   // The enquiry has been received either way; confirmationSent reports the visitor email honestly.
