@@ -120,19 +120,15 @@ export default async function handler(req, res) {
     {
       from: ENQUIRY_FROM_EMAIL,
       to: [enquiry.email],
-      reply_to: ENQUIRY_TO_EMAIL,
-      subject: 'I’ve received your enquiry',
-      text: [
-        'Thanks for getting in touch with Iris & Oak.',
-        '',
-        'I’ve received your enquiry and will be in touch within two working days.',
-        '',
-        'If you didn’t send this enquiry, you can ignore this email.',
-        '',
-        'Iris & Oak'
-      ].join('\n')
-    },
-    'enquiry confirmation'
+      template: {
+        id: 'c7a0c951-cdc4-449d-a1ef-0915a94a967e',
+        variables: {
+          name: enquiry.name,
+          serviceName:
+            enquiry.package || enquiry.needs.join(', ') || 'Custom Project'
+        }
+      }
+    }
   );
 
   // The enquiry has been received either way; confirmationSent reports the visitor email honestly.

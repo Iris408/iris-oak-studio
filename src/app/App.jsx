@@ -801,10 +801,11 @@ const STUDIO_AVAILABILITY = 'Booking Projects for Winter';
 // Portfolio Partnership round status: 'open' | 'filled' | 'soon'
 const PARTNERSHIP_STATUS = 'open';
 const PARTNERSHIP_STATUS_LABELS = { open: 'Open', filled: 'Places filled', soon: 'Opening soon' };
-// Number of businesses in the current round
-const PARTNERSHIP_PLACES = '3';
-// ?package= value that pre-fills "Portfolio Partnership" on the homepage enquiry form
+// Current round's closing date (shown on /portfolio-partnership; nothing expires automatically)
+const PARTNERSHIP_DEADLINE = { iso: '2026-11-30', label: '30 November 2026' };
+// ?package= value that ticks Websites, notes "Portfolio Partnership" and pre-fills the message on the homepage enquiry form
 const PARTNERSHIP_PACKAGE_PARAM = 'portfolio-partnership';
+const PARTNERSHIP_ENQUIRY_MESSAGE = 'Hi, I’m interested in the Portfolio Partnership and would love to hear more. Here’s a little about my business and what I’m hoping the website will do:';
 
 // --- Enquiry form (submits to /api/enquiry; see api/enquiry.js) ---
 // Choice ids match the Studio Offerings ids, so "Discuss…" buttons can preselect them.
@@ -1565,7 +1566,9 @@ export default function App({ page = 'home' }) {
     if (!isHome) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('package') !== PARTNERSHIP_PACKAGE_PARAM) return;
-    preselectEnquiry({ pkg: 'Portfolio Partnership' });
+    preselectEnquiry({ need: 'websites', pkg: 'Portfolio Partnership' });
+    // Starting text only: the visitor can edit or clear it
+    setEnquiry((prev) => (prev.message ? prev : { ...prev, message: PARTNERSHIP_ENQUIRY_MESSAGE }));
     window.history.replaceState(null, '', `/${window.location.hash}`);
   }, [isHome]);
 
@@ -1862,26 +1865,50 @@ export default function App({ page = 'home' }) {
       {/* PORTFOLIO PARTNERSHIP PAGE (/portfolio-partnership) */}
       {page === 'partnership' && (
       <div className="pt-16 pb-24 md:pt-24 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Studio</div>
+        <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Partnership</div>
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">Portfolio Partnership</h1>
-        <p className={`inline-flex items-center gap-2 mt-6 text-xs font-mono uppercase px-2.5 py-1 rounded border ${activeTheme.badge}`}>
-          <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          Current round: {PARTNERSHIP_STATUS_LABELS[PARTNERSHIP_STATUS]}
+
+        {/* Deadline. No automatic expiry: update PARTNERSHIP_DEADLINE (and PARTNERSHIP_STATUS) by hand when the round closes */}
+        <p className={`mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border-l-4 border ${activeTheme.border} ${activeTheme.cardBg} text-sm font-medium`}>
+          <span aria-hidden="true" className="w-2 h-2 shrink-0 rounded-full bg-emerald-500" />
+          <span>
+            Current Round: Open until <time dateTime={PARTNERSHIP_DEADLINE.iso} className="font-bold whitespace-nowrap">{PARTNERSHIP_DEADLINE.label}</time>
+          </span>
         </p>
-        <div className={`mt-8 space-y-4 text-base leading-relaxed ${activeTheme.textMuted}`}>
-          <p>
-            Each round, I offer a small number of independent businesses a complimentary website in return for featuring the finished project as a case study.
-          </p>
-          {PARTNERSHIP_STATUS !== 'soon' && (
-            <p>I’m working with <span className="whitespace-nowrap">{PARTNERSHIP_PLACES}</span> local businesses.</p>
-          )}
-          <p>Want to hear about the next round?</p>
-        </div>
+
+        <p className="mt-8 text-lg sm:text-xl leading-relaxed">
+          A website for your business, a case study for mine. 
+          <br />Each round, I build websites for two independent
+          businesses with my <em>design and development fee waived</em>.
+        </p>
+
+        <ul className="mt-10 grid gap-4">
+          <li className={`p-5 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}>
+            <p className="text-base leading-relaxed">
+              <strong className={`font-bold ${activeTheme.highlight}`}>Included:</strong> A three-page Signature website, designed, built and launched with you.
+            </p>
+          </li>
+          <li className={`p-5 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}>
+            <p className="text-base leading-relaxed">
+              <strong className={`font-bold ${activeTheme.highlight}`}>You cover:</strong> Your domain, hosting and any paid tools, plus permission for me to feature the finished site as a case study.
+            </p>
+          </li>
+          <li className={`p-5 rounded-lg border border-dashed ${activeTheme.border}`}>
+            <p className={`text-base leading-relaxed ${activeTheme.textMuted}`}>
+              <strong className={`font-bold ${activeTheme.text}`}>Not a good fit</strong> if you need an online shop or more than three pages.
+            </p>
+          </li>
+        </ul>
+
+        <p className={`mt-10 text-base leading-relaxed ${activeTheme.textMuted}`}>
+          Tell me a little about your business, and I’ll send you the full details.
+        </p>
+        {/* Opens the homepage enquiry form with Websites ticked and "Portfolio Partnership" noted as the package */}
         <a
           href={`/?package=${PARTNERSHIP_PACKAGE_PARAM}#contact`}
           className={`inline-flex items-center gap-2 mt-6 px-6 py-3 rounded text-sm font-medium transition-all shadow-sm ${activeTheme.accent} ${FOCUS_RING}`}
         >
-          Get in touch
+          Apply for this round
           <ArrowUpRight size={16} aria-hidden="true" />
         </a>
       </div>
@@ -2450,7 +2477,7 @@ export default function App({ page = 'home' }) {
             /* Shown only after the server confirms the enquiry was received */
             <div role="status" className="py-8 flex items-center gap-3">
               <CheckCircle2 size={24} aria-hidden="true" className={successText} />
-              <h3 ref={enquirySentRef} tabIndex={-1} className="text-xl font-bold focus:outline-none">
+              <h3 ref={enquirySentRef} tabIndex={-1} className="text-lg font-bold focus:outline-none">
                 Thanks, I’ll be in touch within two working days.
               </h3>
             </div>
