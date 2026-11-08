@@ -303,7 +303,7 @@ try {
   check('Portfolio Partnership link: Websites ticked, package noted, message pre-filled', JSON.stringify(pp.needs) === '["Websites"]' && pp.pkg && pp.message.startsWith('Hi, I’m interested in the Portfolio Partnership'), JSON.stringify(pp));
 
   // ---------- 9. Every project's images, desktop and phone ----------
-  for (const [width, height, mobile] of [[1280, 900, false], [375, 740, true]]) {
+  for (const [width, height, mobile] of [[1280, 900, false], [640, 900, false], [375, 740, true]]) {
     await viewport(width, height, mobile);
     await load('/portfolio');
     const titles = [KAWARI, MAISON_VALE, 'Bloom', 'PartsPilot', 'AccessHub'];
@@ -320,13 +320,84 @@ try {
       } else if (!mobile) {
         check(`${width}px ${title}: pair side by side at one height, filling the width`, Math.abs(imgs[0].top - imgs[1].top) < 2 && Math.abs(imgs[0].h - imgs[1].h) < 1.5 && fills(imgs[1].left + imgs[1].w - imgs[0].left, imgs[0].contentW), JSON.stringify(imgs.map((i) => [i.left, i.top, i.w, i.h, i.contentW])));
       } else {
-        check(`${width}px ${title}: pair stacked, phone capture below`, imgs[1].top >= imgs[0].bottom && fills(imgs[0].w, imgs[0].contentW), JSON.stringify(imgs.map((i) => [i.top, i.bottom, i.w])));
+        check(`${width}px ${title}: pair in a swipe row, desktop first at full width, phone capture off to the right`, imgs[1].left >= imgs[0].left + imgs[0].w && fills(imgs[0].w, imgs[0].contentW), JSON.stringify(imgs.map((i) => [i.left, i.top, i.w])));
       }
       await key('Escape', 'Escape', 27); await sleep(250);
     }
   }
 
-  // ---------- 10. Mobile popup behaviour ----------
+  // ---------- 10. Phone screenshot carousel (pairs only; below 640px) ----------
+  // State of the swipe row: the indicator text, which image is in view, and the two controls
+  const carousel = () => evaluate(`(() => { const d = document.querySelector('[role=dialog]'); const region = d.querySelector('[role=region][aria-roledescription=carousel]');
+    if (!region) return null;
+    const scroller = region.querySelector('.snap-x'); const s = scroller.getBoundingClientRect();
+    const inView = [...scroller.querySelectorAll('img')].map(i => { const r = i.getBoundingClientRect(); return r.left >= s.left - 1 && r.right <= s.right + 1; });
+    const prev = region.querySelector('button[aria-label="Previous screenshot"]'); const next = region.querySelector('button[aria-label="Next screenshot"]');
+    return { label: region.getAttribute('aria-label'), indicator: region.querySelector('[aria-live]').textContent.trim(), inView,
+      slides: [...scroller.children].map(c => c.getAttribute('aria-label')), snap: getComputedStyle(scroller).scrollSnapType,
+      prevDisabled: prev?.getAttribute('aria-disabled'), nextDisabled: next?.getAttribute('aria-disabled'),
+      focus: document.activeElement.getAttribute('aria-label'), dialogTop: d.scrollTop,
+      noXOverflow: d.scrollWidth <= d.clientWidth, pageX: document.documentElement.scrollWidth <= innerWidth }; })()`);
+  const settle = () => sleep(700);
+  for (const [width, height] of [[320, 640], [375, 740], [390, 844]]) {
+    const tag = `${width}px carousel`;
+    await viewport(width, height, true);
+    await load('/'); await stubFetch();
+    await openProject(KAWARI);
+    await popupImages();
+    let c = await carousel();
+    check(`${tag}: Kawari pair shown as a labelled carousel with two snap slides`, c && c.label === 'Project screenshots' && JSON.stringify(c.slides) === '["1 of 2: Desktop","2 of 2: Mobile"]' && c.snap.includes('x') && c.snap.includes('mandatory'), JSON.stringify(c));
+    check(`${tag}: desktop screenshot first; indicator says Desktop · 1 of 2; Previous unavailable`, c.inView[0] && !c.inView[1] && c.indicator === 'Desktop · 1 of 2' && c.prevDisabled === 'true' && c.nextDisabled === 'false', JSON.stringify(c));
+    check(`${tag}: no sideways overflow in the popup or the page`, c.noXOverflow && c.pageX, JSON.stringify(c));
+
+    // Keyboard: Next and Previous, focus staying on the control used
+    await evaluate(`document.querySelector('[role=dialog] button[aria-label="Next screenshot"]').focus()`);
+    await key('Enter', 'Enter', 13, { text: '\r' }); await settle();
+    c = await carousel();
+    check(`${tag}: Next (Enter) shows the phone screenshot; indicator follows; Next unavailable`, !c.inView[0] && c.inView[1] && c.indicator === 'Mobile · 2 of 2' && c.nextDisabled === 'true' && c.prevDisabled === 'false', JSON.stringify(c));
+    await key('Enter', 'Enter', 13, { text: '\r' }); await settle();
+    c = await carousel();
+    check(`${tag}: Next at the end does nothing and keeps focus`, c.inView[1] && c.focus === 'Next screenshot', JSON.stringify(c));
+    await evaluate(`document.querySelector('[role=dialog] button[aria-label="Previous screenshot"]').focus()`);
+    await key(' ', 'Space', 32, { text: ' ' }); await settle();
+    c = await carousel();
+    check(`${tag}: Previous (Space) goes back to the desktop screenshot`, c.inView[0] && !c.inView[1] && c.indicator === 'Desktop · 1 of 2', JSON.stringify(c));
+    const ring = await evaluate(`getComputedStyle(document.activeElement).outlineStyle`);
+    check(`${tag}: keyboard focus ring visible on the carousel controls`, ring === 'solid', ring);
+
+    // Touch: a horizontal swipe on the row moves to the phone screenshot and back
+    const row = await evaluate(`(() => { const r = document.querySelector('[role=dialog] .snap-x').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width }; })()`);
+    await send('Input.synthesizeScrollGesture', { x: Math.round(row.x), y: Math.round(row.y), xDistance: -Math.round(row.w * 0.8), yDistance: 0, gestureSourceType: 'touch', speed: 1200 }); await settle();
+    c = await carousel();
+    check(`${tag}: swiping left shows the phone screenshot; indicator follows`, c.inView[1] && c.indicator === 'Mobile · 2 of 2', JSON.stringify(c));
+    await send('Input.synthesizeScrollGesture', { x: Math.round(row.x), y: Math.round(row.y), xDistance: Math.round(row.w * 0.8), yDistance: 0, gestureSourceType: 'touch', speed: 1200 }); await settle();
+    c = await carousel();
+    check(`${tag}: swiping right returns to the desktop screenshot`, c.inView[0] && c.indicator === 'Desktop · 1 of 2', JSON.stringify(c));
+
+    // A vertical swipe that starts on the carousel still scrolls the popup, not the page
+    const pageY = await evaluate(`scrollY`);
+    await send('Input.synthesizeScrollGesture', { x: Math.round(row.x), y: Math.round(row.y), xDistance: 0, yDistance: -250, gestureSourceType: 'touch', speed: 1200 }); await settle();
+    c = await carousel();
+    check(`${tag}: vertical swipe over the screenshots scrolls the popup; page and carousel stay put`, c.dialogTop > 50 && (await evaluate(`scrollY`)) === pageY && c.indicator === 'Desktop · 1 of 2', JSON.stringify({ top: c.dialogTop, indicator: c.indicator }));
+
+    // Dismissal still works after using the carousel
+    await key('Escape', 'Escape', 27); await sleep(300);
+    check(`${tag}: Escape closes the popup, focus back on the card`, !(await dialogOpen()) && (await active()).opener === 'yes');
+  }
+  // Single-screenshot projects keep the plain image on phones
+  await viewport(375, 740, true); await load('/');
+  await openProject(MAISON_VALE); await popupImages();
+  check('375px: Maison Vale keeps its single image, no carousel or controls', (await carousel()) === null && (await evaluate(`document.querySelectorAll('[role=dialog] button[aria-label$="screenshot"]').length`)) === 0);
+  await key('Escape', 'Escape', 27); await sleep(250);
+  // From 640px the pair stays side by side with no carousel controls
+  for (const width of [640, 1280]) {
+    await viewport(width, 900); await load('/');
+    await openProject(KAWARI); await popupImages();
+    check(`${width}px: Kawari pair has no carousel or controls`, (await carousel()) === null && (await evaluate(`document.querySelectorAll('[role=dialog] button[aria-label$="screenshot"]').length`)) === 0);
+    await key('Escape', 'Escape', 27); await sleep(250);
+  }
+
+  // ---------- 11. Mobile popup behaviour ----------
   await viewport(375, 740, true);
   await load('/'); await stubFetch();
   await openProject(KAWARI);
@@ -340,7 +411,8 @@ try {
   await shot('kawari-375-top');
   // Keyboard reaches every action on mobile, each scrolled into view inside the popup
   const reach = [];
-  for (let i = 0; i < 6; i++) {
+  // The carousel's Previous / Next come first, so allow a few extra stops
+  for (let i = 0; i < 8; i++) {
     await tab(); await sleep(120);
     reach.push(await evaluate(`(() => { const a = document.activeElement; const r = a.getBoundingClientRect(); const d = document.querySelector('[role=dialog]').getBoundingClientRect(); return { text: a.textContent.replace(/\\s+/g, ' ').trim().slice(0, 30), visible: r.top >= d.top - 1 && r.bottom <= d.bottom + 1 }; })()`));
   }
