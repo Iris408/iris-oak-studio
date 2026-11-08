@@ -9,8 +9,9 @@ import {
   Code, 
   Layout, 
   Server, 
-  ChevronRight, 
-  X, 
+  ChevronRight,
+  ChevronLeft,
+  X,
   Check, 
   Clock,
   ChevronDown
@@ -366,7 +367,7 @@ const CARE_PLANS = [
       'Prioritised findings, ranked by impact',
       'Review visible performance and accessibility issues',
       'Prioritised findings and practical recommendations',
-      'Report delivered within 5 working days'
+      'Report delivered within 5 business days'
     ],
     note: 'If you start an annual maintenance plan within 14 days, the £149 check-up fee is credited toward it.',
     popular: false,
@@ -388,7 +389,7 @@ const CARE_PLANS = [
       'Basic security and uptime checks',
       'Key pages and forms tested after updates',
       'Short monthly care summary',
-      'Email support, reply within 2 working days'
+      'Email support, reply within 2 business days'
     ],
     note: 'Included tasks are agreed for your site before care begins.',
     popular: false,
@@ -1006,9 +1007,14 @@ function useLoopingScroller(ref, { count, interval, enabled }) {
 // Copies used for looping are hidden from screen readers and can't be focused
 const makeInert = (el) => { if (el) el.inert = true; };
 
-// Case-study screenshots: desktop and phone side by side from sm, stacked below. Each column is sized by its
-// image's real aspect ratio (read once it loads), so both share a height without cropping or stretching.
-function ScreenshotPair({ desktop, desktopAlt, mobile, mobileAlt, imageClass }) {
+// Case-study screenshots: desktop and phone side by side from sm. Each column is sized by its image's real
+// aspect ratio (read once it loads), so both share a height without cropping or stretching.
+// On phones they're a swipeable row instead (desktop first), with a position indicator and Previous / Next.
+function ScreenshotPair({ desktop, desktopAlt, mobile, mobileAlt, imageClass, controlClass, mutedClass }) {
+  const isPhone = useMediaQuery('(max-width: 639px)');
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const scrollerRef = useRef(null);
+  const [index, setIndex] = useState(0);
   const [ratios, setRatios] = useState({});
   const record = (key) => (img) => {
     if (img?.complete && img.naturalWidth) {
@@ -1020,6 +1026,63 @@ function ScreenshotPair({ desktop, desktopAlt, mobile, mobileAlt, imageClass }) 
   // added back, so the two images render at exactly the same height. Until both have loaded, a typical 3:1 split.
   const share = ratios.desktop && ratios.mobile ? ratios.desktop / (ratios.desktop + ratios.mobile) : 0.75;
   const columns = `minmax(0, calc((100% - 1rem - 4px) * ${share} + 2px)) minmax(0, 1fr)`;
+
+  // The indicator follows whichever slide is nearest the scroller's left edge, however it got there
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!isPhone || !el) return undefined;
+    const update = () => {
+      const offsets = [...el.children].map((slide) => slide.offsetLeft - el.children[0].offsetLeft);
+      const nearest = offsets.reduce((best, offset, i) => (Math.abs(offset - el.scrollLeft) < Math.abs(offsets[best] - el.scrollLeft) ? i : best), 0);
+      setIndex(nearest);
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    return () => el.removeEventListener('scroll', update);
+  }, [isPhone]);
+
+  if (isPhone) {
+    const slides = [
+      { key: 'desktop', label: 'Desktop', src: desktop, alt: desktopAlt, className: 'w-full' },
+      { key: 'mobile', label: 'Mobile', src: mobile, alt: mobileAlt, className: 'w-full max-w-[12rem]' }
+    ];
+    const goTo = (i) => {
+      const el = scrollerRef.current;
+      if (!el || i < 0 || i >= slides.length) return;
+      el.scrollTo({ left: el.children[i].offsetLeft - el.children[0].offsetLeft, behavior: reducedMotion ? 'auto' : 'smooth' });
+    };
+    // aria-disabled rather than disabled, so focus stays on the button at either end
+    const arrowClass = (disabled) =>
+      `inline-flex items-center justify-center w-9 h-9 rounded-full border transition-opacity ${controlClass} ${FOCUS_RING} ${disabled ? 'opacity-40 cursor-default' : 'hover:opacity-80'}`;
+
+    return (
+      <div role="region" aria-roledescription="carousel" aria-label="Project screenshots" className="mb-6">
+        <div ref={scrollerRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {slides.map((slide, i) => (
+            <div key={slide.key} role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}: ${slide.label}`} className="shrink-0 w-full snap-start flex items-center justify-center">
+              <img ref={record(slide.key)} onLoad={(e) => record(slide.key)(e.currentTarget)} src={slide.src} alt={slide.alt} className={`h-auto ${slide.className} ${imageClass}`} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <button type="button" aria-label="Previous screenshot" aria-disabled={index === 0} onClick={() => goTo(index - 1)} className={arrowClass(index === 0)}>
+            <ChevronLeft size={18} aria-hidden="true" />
+          </button>
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true" className="flex gap-1.5">
+              {slides.map((slide, i) => (
+                <span key={slide.key} className={`block h-1.5 rounded-full transition-all bg-current ${i === index ? 'w-4' : 'w-1.5 opacity-30'}`} />
+              ))}
+            </span>
+            <span aria-live="polite" className={`text-xs ${mutedClass}`}>{slides[index].label} · {index + 1} of {slides.length}</span>
+          </div>
+          <button type="button" aria-label="Next screenshot" aria-disabled={index === slides.length - 1} onClick={() => goTo(index + 1)} className={arrowClass(index === slides.length - 1)}>
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ '--screenshot-columns': columns }} className="grid grid-cols-1 sm:[grid-template-columns:var(--screenshot-columns)] gap-4 items-start mb-6">
@@ -2207,6 +2270,8 @@ export default function App({ page = 'home' }) {
                 mobile={project.mobileImage}
                 mobileAlt={project.mobileImageAlt}
                 imageClass={`rounded-lg border ${activeTheme.border}`}
+                controlClass={`${activeTheme.border} ${activeTheme.cardBg}`}
+                mutedClass={activeTheme.textMuted}
               />
             ) : (
               <div className="rounded-lg overflow-hidden mb-6 border border-zinc-800">
@@ -2781,7 +2846,7 @@ export default function App({ page = 'home' }) {
           <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Enquire</div>
           <h2 ref={enquiryHeadingRef} tabIndex={-1} className="text-3xl sm:text-4xl font-bold tracking-tight mb-4 focus:outline-none">Plan your project</h2>
           <p className={`text-sm sm:text-base ${activeTheme.textMuted}`}>
-            Tell me a little about your project, and I'll come back with a clear plan and price, within three working days.
+            Tell me a little about your project, and I'll come back with a clear plan and price, within three business days.
           </p>
         </div>
 
@@ -2793,7 +2858,7 @@ export default function App({ page = 'home' }) {
             <div role="status" className="py-8 flex items-center gap-3">
               <CheckCircle2 size={24} aria-hidden="true" className={successText} />
               <h3 ref={enquirySentRef} tabIndex={-1} className="text-lg font-bold focus:outline-none">
-                Thanks, I’ll be in touch within two working days.
+                Thanks, I’ll be in touch within three business days.
               </h3>
             </div>
           ) : (

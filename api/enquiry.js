@@ -33,6 +33,13 @@ const confirmationServiceName = ({ package: pkg, needs }) =>
   needs.join(', ') || // already limited to NEEDS
   'Custom Project';
 
+// The confirmation greets the visitor by the submitted name ("Hi Alex Morgan") when it looks like a person's name:
+// letters with single spaces, hyphens, apostrophes or full stops between them, up to 60 characters and 5 words.
+// Anything else (links, email addresses, digits, symbols) falls back to "there", so the form can't be used to
+// put arbitrary text in an email to someone else's address.
+const GREETING_NAME_PATTERN = /^\p{L}[\p{L}\p{M}]*\.?(?:(?: |-|'|’)\p{L}[\p{L}\p{M}]*\.?){0,4}$/u;
+const greetingName = (name) => (name.length <= 60 && GREETING_NAME_PATTERN.test(name) ? name : 'there');
+
 const clean = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 // Single-line fields must not contain line breaks (keeps the subject and summary tidy)
 const oneLine = (value) => value.replace(/[\r\n]+/g, ' ');
@@ -130,8 +137,8 @@ export default async function handler(req, res) {
   if (!notified) return res.status(502).json({ ok: false, error: 'Enquiry could not be sent' });
 
   // 2. Confirmation to the visitor, sent only once the studio notification was accepted.
-  // The address is unverified, so the email carries no free text from the form: a generic greeting
-  // and a service name from the server-side lists, so the form can't be used to send arbitrary
+  // The address is unverified, so the email carries no free text from the form: only the name when it passes
+  // greetingName, and a service name from the server-side lists, so the form can't be used to send arbitrary
   // messages to other people's addresses. reply_to here takes precedence over the template's default.
   const confirmationSent = await sendEmail(
     {
@@ -141,7 +148,7 @@ export default async function handler(req, res) {
       template: {
         id: CONFIRMATION_TEMPLATE_ID,
         variables: {
-          name: 'there',
+          name: greetingName(enquiry.name),
           serviceName: confirmationServiceName(enquiry)
         }
       }

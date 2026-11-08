@@ -5,6 +5,7 @@ Headless Chrome checks against the production build, served locally with the sam
 - `modal.test.mjs` checks the project popups. It covers:
   - the Kawari and Maison Vale case studies, with their approved copy;
   - every project's images in the single-image and two-image layouts: each image loads, keeps its proportions and leaves no empty column;
+  - the phone screenshot carousel at 320, 375 and 390px: both images reachable by Previous / Next, keyboard and swipe, the indicator following the image in view, vertical scrolling and Escape still working;
   - focus, keyboard and dismissal behaviour;
   - "Start a similar project" and "Request Similar Project";
   - the Display settings drawer and the Portfolio Partnership pre-fill.

@@ -30,6 +30,12 @@ Builds the site and runs the headless Chrome suites (project popups and phone la
 
     npm run test:browser
 
+## Enquiry endpoint tests
+
+Runs `api/enquiry.js` with Resend stubbed out, so no email is sent and no API key is needed. Checks the confirmation email's template variables, including the greeting name.
+
+    npm run test:enquiry
+
 ## Project structure
 
 - `src/app/` — main studio website
