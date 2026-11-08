@@ -200,6 +200,10 @@ const PORTFOLIO_CATEGORIES = [
 // `status` (Demo / Prototype) is the right image badge. `eyebrow` (optional) names who the project is for.
 // `tags` fill the Tech Stack list in the project popup. `liveUrl` (client sites) and `demoUrl` (product builds)
 // add an external link when set. Only add client projects once they're complete and the client has approved featuring them.
+// Case-study popup (optional; a project with `caseStudy` uses it instead of details/technicalExecution):
+// `mobileImage`/`mobileImageAlt` (a real phone capture, shown beside the desktop image), `quickFacts` ([label, value] pairs),
+// `caseStudy` ([heading, text] pairs), `builtWith` (shown above `tags`) and `testimonial` ({ quote, name, role }),
+// which renders only when set: add it only once the client has approved the exact wording and attribution.
 const SAMPLE_PROJECTS = [
   {
     id: 'kawari-company',
@@ -213,11 +217,27 @@ const SAMPLE_PROJECTS = [
     stats: {},
     details: {
       heading: 'Project scope & deliverables',
-      text: 'A clean, minimalist website that clearly presents the company’s expertise, services and gives prospective clients a simple way to get in touch.'
+      text: 'A clean, minimalist website that presents the company’s expertise and services, and gives prospective clients a simple way to get in touch.'
     },
     technicalExecution: 'Built with Next.js and React, with a responsive layout that adapts to different screen sizes.',
     image: '/images/kawari-company/homepage.png',
-    imageAlt: 'The Kawari Company homepage: the headline ‘Expert advice. Impacting practice.’ beside a photo of a sunlit stone staircase.'
+    imageAlt: 'The Kawari Company homepage: the headline ‘Expert advice. Impacting practice.’ beside a photo of a sunlit stone staircase.',
+    // Captured from the live site at 390×844
+    mobileImage: '/images/kawari-company/mobile.webp',
+    mobileImageAlt: 'The Kawari Company homepage on a phone: the staircase photo above the headline and a ‘Request a Consultation’ button.',
+    quickFacts: [
+      ['Client', 'The Kawari Company'],
+      ['Industry', 'Safeguarding Consultancy'],
+      ['Services', 'Design & build'],
+      ['Platform', 'Next.js']
+    ],
+    caseStudy: [
+      ['The brief', 'An established consultancy with 25+ years of experience needed its first website, one that felt as credible as its reputation.'],
+      ['The approach', 'A calm, editorial design with clear services and a simple route to request a consultation.'],
+      ['The result', 'A professional online presence the client can share with confidence.']
+    ],
+    builtWith: 'Built with Next.js for fast loading, with a layout that adapts to phones, tablets and desktops.',
+    testimonial: null
   },
   {
     id: 'maison-vale',
@@ -234,8 +254,21 @@ const SAMPLE_PROJECTS = [
       text: 'A refined, image-led website with dedicated pages for weddings, corporate events and special occasions, each with its own tailored enquiry form. The copy balances warmth with experience, and the special occasions page is written to suit everything from milestone birthdays to funerals.'
     },
     technicalExecution: 'Built on Squarespace so the client can update content themselves, with enquiry forms connected through Zapier and Resend to deliver clear, well-formatted notifications.',
-    image: '/images/maison-vale/homepage.webp',
-    imageAlt: 'Events by Maison Vale homepage: the script logo over an aerial photo of a candlelit wedding ceremony, with rows of gold chairs and draped fabric.'
+    image: '/images/maison-vale/homepage.png',
+    imageAlt: 'Maison Vale Events homepage showing a candlelit reception with tall floral centrepieces.',
+    quickFacts: [
+      ['Client', 'Events by Maison Vale'],
+      ['Industry', 'Weddings & Events'],
+      ['Services', 'Design & build'],
+      ['Platform', 'Squarespace']
+    ],
+    caseStudy: [
+      ['The brief', 'An events company with almost 30 years of experience needed an elegant website that reflects the care behind every wedding, corporate event and special occasion.'],
+      ['The approach', 'A refined, image-led design with dedicated pages for each type of event, warm copy that balances celebration with sensitivity, and tailored enquiry forms for every service.'],
+      ['The result', 'A polished online presence that guides each visitor to the right service and makes it easy to start planning.']
+    ],
+    builtWith: 'Built on Squarespace so the client can update content themselves, with enquiry forms connected through Zapier and Resend, and a layout that adapts to phones, tablets and desktops.',
+    testimonial: null
   },
   {
     id: 'bloom',
@@ -269,7 +302,7 @@ const SAMPLE_PROJECTS = [
     demoUrl: 'https://www.partspilot.uk',
     client: '',
     summary: 'Automotive inventory management platform for stock tracking, low-stock alerts and clear reporting for teams, all in one place.',
-    tags: ['React', 'TypeScript', 'FastAPI', 'PostgreSQL', 'Docker'],
+    tags: ['Python', 'TypeScript', 'FastAPI', 'PostgreSQL', 'Docker'],
     stats: {},
     details: {
       heading: 'Features & focus',
@@ -279,7 +312,7 @@ const SAMPLE_PROJECTS = [
         'Category summaries and inventory reporting'
       ]
     },
-    technicalExecution: 'Built with a React and TypeScript front end, a FastAPI back end and a PostgreSQL database, with Docker used to containerise the application.',
+    technicalExecution: 'Built with a React and TypeScript front end, a Python and FastAPI back end and a PostgreSQL database, with Docker used to containerise the application.',
     image: '/images/partspilot/dashboard.png',
     imageAlt: 'PartsPilot landing page: the headline ‘Smart inventory. Stronger business.’ beside an inventory dashboard with stock figures and a trend chart.'
   },
@@ -292,7 +325,7 @@ const SAMPLE_PROJECTS = [
     demoUrl: 'https://accesshub-iris408.vercel.app',
     client: '',
     summary: 'One place to manage people, roles and access requests, so teams always know who can see what. Admins, managers and auditors each get the right level of access.',
-    tags: ['React', 'TypeScript', 'FastAPI', 'PostgreSQL', 'RBAC'],
+    tags: ['Python', 'TypeScript', 'FastAPI', 'PostgreSQL', 'RBAC'],
     stats: {},
     details: {
       heading: 'Features & focus',
@@ -302,7 +335,7 @@ const SAMPLE_PROJECTS = [
         'Access request handling in one place'
       ]
     },
-    technicalExecution: 'Built with a React and TypeScript front end, a FastAPI back end and a PostgreSQL database, using role-based access control (RBAC) to manage what each user can see and do.',
+    technicalExecution: 'Built with a React and TypeScript front end, a Python and FastAPI back end and a PostgreSQL database, using role-based access control (RBAC) to manage what each user can see and do.',
     image: '/images/accesshub/dashboard.png',
     imageAlt: 'AccessHub sign-in page: the headline ‘A clearer view of who has access.’ above a diagram of admin, manager and viewer/auditor roles, beside a sign-in form.'
   }
@@ -499,7 +532,7 @@ const WEBSITE_PACKAGES = [
       'Launch support for the first 14 days after going live'
     ],
     note: 'Extra sections or pages are quoted separately.',
-    readyIn: 'Ready in about 1–2 weeks',
+    readyIn: 'Ready in about 1 week',
     popular: false
   },
   {
@@ -518,7 +551,7 @@ const WEBSITE_PACKAGES = [
       'Launch support for the first 14 days after going live'
     ],
     note: 'Additional pages are quoted separately.',
-    readyIn: 'Ready in about 2 weeks',
+    readyIn: 'Ready in about 1–2 weeks',
     popular: true
   },
   {
@@ -537,7 +570,7 @@ const WEBSITE_PACKAGES = [
       'Launch support for the first 21 days after going live'
     ],
     note: 'Larger integrations and extra features are scoped and quoted separately.',
-    readyIn: 'Ready in about 3–4 weeks',
+    readyIn: 'Ready in about 2–3 weeks',
     popular: false
   }
 ];
@@ -560,7 +593,7 @@ const BOOKING_PACKAGES = [
       'Checked end to end, so bookings or sign-ups arrive where they should',
       'Handover notes, so you know how it works'
     ],
-    readyIn: 'Ready in about 1 week',
+    readyIn: 'Ready in 2-3 days',
     cta: 'Discuss Essential Integration →'
   },
   {
@@ -577,7 +610,7 @@ const BOOKING_PACKAGES = [
       'Responses sent to your email, a spreadsheet, or both',
       'An automatic confirmation email for your customer'
     ],
-    readyIn: 'Ready in about 1–2 weeks',
+    readyIn: 'Ready in about 4–5 days',
     cta: 'Discuss Smart Forms →'
   },
   {
@@ -594,7 +627,7 @@ const BOOKING_PACKAGES = [
       'Up to three tools connected as one flow',
       'A 30-minute handover call by phone or video'
     ],
-    readyIn: 'Ready in about 2–3 weeks',
+    readyIn: 'Ready in about 1–2 weeks',
     cta: 'Discuss Connected System →'
   }
 ];
@@ -640,7 +673,7 @@ const BUSINESS_PACKAGES = [
       'Error alerts, so you know if something stops working',
       'A 30-minute handover call by phone or video'
     ],
-    readyIn: 'Ready in about 2–3 weeks',
+    readyIn: 'Ready in about 1–2 weeks',
     cta: 'Discuss Workflow Pack →'
   },
   {
@@ -688,7 +721,7 @@ const WEB_APP_PACKAGES = [
       'Recommended approach, tools and user journeys',
       'Fixed quote, timeline and written summary sent by email, yours to keep even if you don’t go ahead'
     ],
-    readyIn: 'Ready in about 1 week',
+    readyIn: '',
     cta: 'Book Discovery ⊹'
   },
   {
@@ -751,17 +784,37 @@ const WEB_APP_EXAMPLES = [
   'Larger automation systems with their own interface'
 ];
 
-// Dialog keyboard handling: focus moves in on open, Escape closes, Tab/Shift+Tab stay inside,
-// and focus returns to the element that opened the dialog when it closes.
-function useDialogFocus(isOpen, dialogRef, onClose, returnFocusRef) {
+// Dialog handling: focus moves in on open (to `initialFocusRef` if given, else the first control), Escape closes,
+// Tab/Shift+Tab stay inside, the rest of the page is inert and doesn't scroll, and on close focus returns to
+// `returnFocusRef.current` (read at close time, so a caller can clear it to send focus elsewhere).
+function useDialogFocus(isOpen, dialogRef, onClose, returnFocusRef, initialFocusRef) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) return;
 
-    const getFocusable = () => Array.from(dialogRef.current?.querySelectorAll(FOCUSABLE_SELECTOR) ?? []);
-    getFocusable()[0]?.focus();
+    const dialog = dialogRef.current;
+    // Background: every element outside the dialog's branch becomes inert (no clicks, focus or screen-reader access)
+    const inerted = [];
+    for (let node = dialog; node?.parentElement && node !== document.body; node = node.parentElement) {
+      for (const sibling of node.parentElement.children) {
+        if (sibling !== node && !sibling.inert && sibling.tagName !== 'SCRIPT') {
+          sibling.inert = true;
+          inerted.push(sibling);
+        }
+      }
+    }
+    // Keep the page still behind the dialog; pad for the scrollbar so the layout doesn't shift
+    const root = document.documentElement;
+    const previousOverflow = root.style.overflow;
+    const previousPadding = root.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - root.clientWidth;
+    root.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) root.style.paddingRight = `${scrollbarWidth}px`;
+
+    const getFocusable = () => Array.from(dialog?.querySelectorAll(FOCUSABLE_SELECTOR) ?? []);
+    (initialFocusRef?.current ?? getFocusable()[0])?.focus({ preventScroll: true });
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -775,7 +828,7 @@ function useDialogFocus(isOpen, dialogRef, onClose, returnFocusRef) {
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
-      const inside = dialogRef.current.contains(document.activeElement);
+      const inside = dialog.contains(document.activeElement);
 
       if (e.shiftKey && (document.activeElement === first || !inside)) {
         e.preventDefault();
@@ -787,10 +840,12 @@ function useDialogFocus(isOpen, dialogRef, onClose, returnFocusRef) {
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    const opener = returnFocusRef.current;
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      opener?.focus();
+      inerted.forEach((el) => { el.inert = false; });
+      root.style.overflow = previousOverflow;
+      root.style.paddingRight = previousPadding;
+      returnFocusRef.current?.focus();
     };
   }, [isOpen]);
 }
@@ -805,6 +860,10 @@ const PARTNERSHIP_STATUS_LABELS = { open: 'Open', filled: 'Places filled', soon:
 const PARTNERSHIP_DEADLINE = { iso: '2026-11-30', label: '30 November 2026' };
 // ?package= value that ticks Websites, notes "Portfolio Partnership" and pre-fills the message on the homepage enquiry form
 const PARTNERSHIP_PACKAGE_PARAM = 'portfolio-partnership';
+// "Start a similar project" (project popup): starting text for an empty message box, or the line added to a draft
+const similarProjectMessage = (project) =>
+  `Hi, I’d like to start a project similar to ${project.title}. Here’s a little about my business and what I’m hoping the website will do:`;
+const similarProjectLine = (project) => `I’d like to start a project similar to ${project.title}.`;
 const PARTNERSHIP_ENQUIRY_MESSAGE = 'Hi, I’m interested in the Portfolio Partnership and would love to hear more. Here’s a little about my business and what I’m hoping the website will do:';
 
 // --- Enquiry form (submits to /api/enquiry; see api/enquiry.js) ---
@@ -812,13 +871,13 @@ const PARTNERSHIP_ENQUIRY_MESSAGE = 'Hi, I’m interested in the Portfolio Partn
 const ENQUIRY_NEEDS = [
   { id: 'websites', label: 'Websites', desc: SERVICE_DESCRIPTIONS.websites },
   { id: 'booking-integrations', label: 'Integrations', desc: SERVICE_DESCRIPTIONS['booking-integrations'] },
-  { id: 'business-tools', label: 'Business tools', desc: SERVICE_DESCRIPTIONS['business-tools'] },
-  { id: 'web-apps', label: 'Web apps', desc: SERVICE_DESCRIPTIONS['web-apps'] },
-  { id: 'site-maintenance', label: 'Site maintenance', desc: SERVICE_DESCRIPTIONS['site-maintenance'] },
-  { id: 'not-sure', label: 'Not sure yet', desc: 'Tell me what you’re trying to do and I’ll suggest the right fit.' }
+  { id: 'business-tools', label: 'Business Tools', desc: SERVICE_DESCRIPTIONS['business-tools'] },
+  { id: 'web-apps', label: 'Web Apps', desc: SERVICE_DESCRIPTIONS['web-apps'] },
+  { id: 'site-maintenance', label: 'Site Maintenance', desc: SERVICE_DESCRIPTIONS['site-maintenance'] },
+  { id: 'not-sure', label: 'Not sure what you need?', desc: 'Tell me what you’re trying to do, and I’ll suggest the right fit.' }
 ];
-const ENQUIRY_LAUNCH_OPTIONS = ['ASAP', 'Within a month', '1–3 months', 'Flexible'];
-const ENQUIRY_BUDGET_OPTIONS = ['Under £1,000', '£1,000–£5,000', '£5,000–£15,000', '£15,000+', 'Not sure yet'];
+const ENQUIRY_LAUNCH_OPTIONS = ['ASAP', 'Within a month', '1–3 months', 'Flexible', 'To be confirmed'];
+const ENQUIRY_BUDGET_OPTIONS = ['Under £1,000', '£1,000–£5,000', '£5,000–£15,000', '£15,000+', 'To be decided'];
 const ENQUIRY_ENDPOINT = '/api/enquiry';
 const ENQUIRY_TIMEOUT_MS = 20000;
 const EMPTY_ENQUIRY = { name: '', business: '', email: '', message: '', launch: '', budget: '' };
@@ -947,6 +1006,29 @@ function useLoopingScroller(ref, { count, interval, enabled }) {
 // Copies used for looping are hidden from screen readers and can't be focused
 const makeInert = (el) => { if (el) el.inert = true; };
 
+// Case-study screenshots: desktop and phone side by side from sm, stacked below. Each column is sized by its
+// image's real aspect ratio (read once it loads), so both share a height without cropping or stretching.
+function ScreenshotPair({ desktop, desktopAlt, mobile, mobileAlt, imageClass }) {
+  const [ratios, setRatios] = useState({});
+  const record = (key) => (img) => {
+    if (img?.complete && img.naturalWidth) {
+      const ratio = img.naturalWidth / img.naturalHeight;
+      setRatios((current) => (current[key] === ratio ? current : { ...current, [key]: ratio }));
+    }
+  };
+  // The width left after the 1rem gap and each image's 1px borders is shared by aspect ratio, then the borders are
+  // added back, so the two images render at exactly the same height. Until both have loaded, a typical 3:1 split.
+  const share = ratios.desktop && ratios.mobile ? ratios.desktop / (ratios.desktop + ratios.mobile) : 0.75;
+  const columns = `minmax(0, calc((100% - 1rem - 4px) * ${share} + 2px)) minmax(0, 1fr)`;
+
+  return (
+    <div style={{ '--screenshot-columns': columns }} className="grid grid-cols-1 sm:[grid-template-columns:var(--screenshot-columns)] gap-4 items-start mb-6">
+      <img ref={record('desktop')} onLoad={(e) => record('desktop')(e.currentTarget)} src={desktop} alt={desktopAlt} className={`w-full h-auto ${imageClass}`} />
+      <img ref={record('mobile')} onLoad={(e) => record('mobile')(e.currentTarget)} src={mobile} alt={mobileAlt} className={`w-full max-w-[12rem] sm:max-w-none mx-auto h-auto ${imageClass}`} />
+    </div>
+  );
+}
+
 // Portfolio carousel: two cards at a time from md, one on phones, in a swipeable row that loops 1 → 2 → 3 → 1.
 // The leading card gets its hover look while the carousel is moving on its own.
 function ProjectCarousel({ label, projects, renderCard }) {
@@ -988,19 +1070,13 @@ function ProjectCarousel({ label, projects, renderCard }) {
 // Width of the edge fades on tool rows: no wider than a pill's border and padding, so pill text is never faded
 const TOOL_ROW_FADE = '0.75rem';
 
-// One "Tools I often use" category: a label and a swipeable row of tool pills that cycles through the tools
-// when they don't all fit. Keyboard users can focus the row and scroll it with the arrow keys.
-// Soft fades at either edge show there's more to scroll that way (only on the side(s) with more).
-function ToolRow({ title, tools, pillClass, labelClass, arrowClass }) {
-  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
-  const rowRef = useRef(null);
-  const labelId = useId();
-  const { looping } = useLoopingScroller(rowRef, { count: tools.length, interval: TOOL_ROW_INTERVAL_MS, enabled: !reducedMotion });
-  const items = looping ? [...tools, ...tools] : tools;
+// Tracks whether a horizontal scroller is at its start and end, so edge fades only show on the side(s) with more.
+// `key` re-measures when the scroller's content changes shape.
+function useScrollEdges(ref, key) {
   const [edges, setEdges] = useState({ atStart: true, atEnd: true });
 
   useEffect(() => {
-    const el = rowRef.current;
+    const el = ref.current;
     if (!el) return undefined;
     const update = () => {
       const max = el.scrollWidth - el.clientWidth;
@@ -1014,9 +1090,25 @@ function ToolRow({ title, tools, pillClass, labelClass, arrowClass }) {
       el.removeEventListener('scroll', update);
       observer.disconnect();
     };
-  }, [looping]);
+  }, [ref, key]);
 
-  const fadeMask = `linear-gradient(to right, ${edges.atStart ? '#000' : 'transparent'} 0, #000 ${TOOL_ROW_FADE}, #000 calc(100% - ${TOOL_ROW_FADE}), ${edges.atEnd ? '#000' : 'transparent'} 100%)`;
+  return edges;
+}
+
+const edgeFadeMask = (edges, width = TOOL_ROW_FADE) =>
+  `linear-gradient(to right, ${edges.atStart ? '#000' : 'transparent'} 0, #000 ${width}, #000 calc(100% - ${width}), ${edges.atEnd ? '#000' : 'transparent'} 100%)`;
+
+// One "Tools I often use" category: a label and a swipeable row of tool pills that cycles through the tools
+// when they don't all fit. Keyboard users can focus the row and scroll it with the arrow keys.
+// Soft fades at either edge show there's more to scroll that way (only on the side(s) with more).
+function ToolRow({ title, tools, pillClass, labelClass, arrowClass }) {
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const rowRef = useRef(null);
+  const labelId = useId();
+  const { looping } = useLoopingScroller(rowRef, { count: tools.length, interval: TOOL_ROW_INTERVAL_MS, enabled: !reducedMotion });
+  const items = looping ? [...tools, ...tools] : tools;
+  const edges = useScrollEdges(rowRef, looping);
+  const fadeMask = edgeFadeMask(edges);
 
   return (
     <div className="sm:grid sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:items-center sm:gap-3">
@@ -1088,10 +1180,19 @@ export default function App({ page = 'home' }) {
   const [submitStatus, setSubmitStatus] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
   const errorSummaryRef = useRef(null);
   const enquirySentRef = useRef(null);
+  const enquiryHeadingRef = useRef(null);
   const [billingPeriod, setBillingPeriod] = useState('monthly'); // 'monthly' | 'annual'
+  // Phones show one care plan at a time; this is the one picked (it doesn't change with the billing period)
+  const [carePlanId, setCarePlanId] = useState('tier-growth');
+
+  // Below `sm`, the offering tabs become one swipeable row styled like the billing toggle
+  const isPhone = useMediaQuery('(max-width: 639px)');
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
   // Studio Offerings tabs + header dropdown
   const [offeringTab, setOfferingTab] = useState('websites');
+  const offeringTabListRef = useRef(null);
+  const offeringTabEdges = useScrollEdges(offeringTabListRef, isPhone);
   const [isOfferingsMenuOpen, setIsOfferingsMenuOpen] = useState(false);
   const [isPortfolioMenuOpen, setIsPortfolioMenuOpen] = useState(false);
   const portfolioMenuRef = useRef(null);
@@ -1153,11 +1254,13 @@ export default function App({ page = 'home' }) {
 
   useDialogFocus(isDrawerOpen, drawerRef, () => setIsDrawerOpen(false), configButtonRef);
 
-  // Project popup: opened from a card's title button, which gets focus back on close
+  // Project popup: opened from a card's title button, which gets focus back on close.
+  // Focus starts on the title so the top of the case study is in view.
   const projectDialogRef = useRef(null);
+  const projectTitleRef = useRef(null);
   const projectOpenerRef = useRef(null);
   const projectBackdropPressRef = useRef(false);
-  useDialogFocus(!!selectedProject, projectDialogRef, () => setSelectedProject(null), projectOpenerRef);
+  useDialogFocus(!!selectedProject, projectDialogRef, () => setSelectedProject(null), projectOpenerRef, projectTitleRef);
 
 
   // Move focus to the confirmation once the server has confirmed the enquiry was received
@@ -1173,7 +1276,7 @@ export default function App({ page = 'home' }) {
       if (focusTab) carePlansRef.current?.focus({ preventScroll: true });
       return;
     }
-    setOfferingTab(id);
+    selectOfferingTab(id);
     requestAnimationFrame(() => {
       offeringsRef.current?.scrollIntoView();
       if (focusTab) offeringTabRefs.current[id]?.focus({ preventScroll: true });
@@ -1247,8 +1350,41 @@ export default function App({ page = 'home' }) {
       : null;
     if (!next) return;
     e.preventDefault();
-    setOfferingTab(next);
+    selectOfferingTab(next);
     offeringTabRefs.current[next]?.focus();
+  };
+
+  // Site Maintenance card beside the offering tabs (after the tab panels on phones)
+  const renderCareOfferingLink = () => (
+    <a
+      href={`#${CARE_OFFERING.id}`}
+      onClick={(e) => {
+        e.preventDefault();
+        window.history.replaceState(null, '', `#${CARE_OFFERING.id}`);
+        showOffering(CARE_OFFERING.id, { focusTab: true });
+      }}
+      className={`p-4 rounded-lg border border-dashed text-left transition-all hover:opacity-80 ${FOCUS_RING} ${activeTheme.border}`}
+    >
+      <CARE_OFFERING.Icon size={18} aria-hidden="true" className={`mb-3 ${activeTheme.highlight}`} />
+      <span className="flex items-center gap-1 text-sm font-bold">
+        {CARE_OFFERING.name}
+        <ChevronDown size={14} aria-hidden="true" />
+      </span>
+      <span className={`block text-xs mt-1 ${activeTheme.textMuted}`}>{CARE_OFFERING.positioning}</span>
+    </a>
+  );
+
+  // On phones, scroll the tab row sideways (never the page) so the chosen tab sits clear of the edge fades
+  const selectOfferingTab = (id) => {
+    setOfferingTab(id);
+    const row = offeringTabListRef.current;
+    const tab = offeringTabRefs.current[id];
+    if (!isPhone || !row || !tab) return;
+    const pad = 12;
+    const left = tab.offsetLeft - pad;
+    const right = tab.offsetLeft + tab.offsetWidth + pad - row.clientWidth;
+    const target = left < row.scrollLeft ? left : right > row.scrollLeft ? right : null;
+    if (target !== null) row.scrollTo({ left: target, behavior: reducedMotion ? 'auto' : 'smooth' });
   };
 
   // Portfolio card and popup actions: client sites open as "View project", portfolio builds as "See how it works"
@@ -1561,6 +1697,51 @@ export default function App({ page = 'home' }) {
     if (pkg) setPackageInterest(pkg);
   };
 
+  // Bring the enquiry form into view and focus its heading (after a popup has closed and released the page)
+  const focusEnquiryForm = () => {
+    requestAnimationFrame(() => {
+      document.getElementById('contact')?.scrollIntoView();
+      enquiryHeadingRef.current?.focus({ preventScroll: true });
+    });
+  };
+
+  // "Start a similar project": note the project in the message box. An empty box gets the full starting text;
+  // a draft is kept as typed, with the project added on its own line (once).
+  const prefillSimilarProject = (project) => {
+    setEnquiry((prev) => {
+      if (prev.message.includes(`similar to ${project.title}`)) return prev;
+      const message = prev.message.trim()
+        ? `${prev.message.trimEnd()}\n\n${similarProjectLine(project)}`
+        : similarProjectMessage(project);
+      return { ...prev, message };
+    });
+  };
+
+  // Enquiry links in the project popup. On the homepage: close the popup and move focus to the form
+  // (not back to the card). Elsewhere the link opens the homepage form (?project= pre-fills it there).
+  const handleProjectEnquiry = (e, project, { prefill = false } = {}) => {
+    if (!isHome) {
+      setSelectedProject(null);
+      return;
+    }
+    e.preventDefault();
+    if (prefill) prefillSimilarProject(project);
+    projectOpenerRef.current = null;
+    setSelectedProject(null);
+    focusEnquiryForm();
+  };
+
+  // Links such as /?project=kawari-company#contact ("Start a similar project" from /portfolio)
+  useEffect(() => {
+    if (!isHome) return;
+    const params = new URLSearchParams(window.location.search);
+    const project = SAMPLE_PROJECTS.find((p) => p.caseStudy && p.id === params.get('project'));
+    if (!project) return;
+    prefillSimilarProject(project);
+    window.history.replaceState(null, '', `/${window.location.hash}`);
+    focusEnquiryForm();
+  }, [isHome]);
+
   // Links such as /?package=portfolio-partnership#contact (from the Portfolio Partnership page)
   useEffect(() => {
     if (!isHome) return;
@@ -1589,11 +1770,15 @@ export default function App({ page = 'home' }) {
       <header className={`sticky top-0 z-40 backdrop-blur-md border-b ${activeTheme.border} ${activeTheme.bg}/80 transition-colors`}>
         {/* Tablet and small desktop (md–lg): nav wraps onto its own row; from xl everything sits on one row */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-auto md:py-3 xl:h-16 xl:py-0 flex flex-wrap xl:flex-nowrap items-center justify-between gap-y-3">
-          <div className="flex items-center gap-3 whitespace-nowrap">
-            <div aria-hidden="true" className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
+          {/* Phones: the brand takes the room the header controls leave, and the descriptor wraps under the name if it can't fit beside it */}
+          <div className="flex flex-1 basis-0 min-w-0 mr-3 md:flex-none md:basis-auto md:mr-0 items-center gap-3 whitespace-nowrap">
+            <div aria-hidden="true" className="shrink-0 w-3 h-3 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
+            <div className="flex flex-wrap items-baseline gap-x-2 min-w-0">
               <a href="/" className="font-bold tracking-wider text-sm uppercase">
                 {studioName}
               </a>
+              <span className={`md:hidden text-xs font-normal ${activeTheme.textMuted}`}>Design Studio</span>
+            </div>
             <span className={`hidden md:inline-block text-xs px-2 py-0.5 rounded border ${activeTheme.badge}`}>
               Digital Studio
             </span>
@@ -1676,7 +1861,7 @@ export default function App({ page = 'home' }) {
           </nav>
 
           {/* Action Controls */}
-          <div className="flex items-center gap-2">
+          <div className="shrink-0 flex items-center gap-2">
             <button
               ref={configButtonRef}
               aria-haspopup="dialog"
@@ -1706,13 +1891,25 @@ export default function App({ page = 'home' }) {
       {isHome && (<>
       {/* DYNAMIC STUDIO HER0 SECTION */}
       <section className="relative isolate pt-20 pb-16 md:pt-32 md:pb-24 border-b border-dashed border-zinc-800/40 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Decorative slow-orbit background (behind content, non-interactive, static with reduced motion) */}
+        {/* Decorative slow-orbit background (behind content, non-interactive, static with reduced motion).
+            From xl the orbit moves right by up to --orbit-shift. It moves with its clipping layer into the margin
+            beside the centred 80rem container, but never further than that margin (less 10px for a scrollbar),
+            so it can't cause sideways scrolling, even with larger text widening the container. Where there's no
+            margin, the stage still moves --orbit-nudge past the layer's edge (the artwork stops ~47px short of
+            the stage's right edge, so that never clips it). */}
         <div
           aria-hidden="true"
-          className={`pointer-events-none select-none absolute inset-0 -z-10 overflow-hidden ${activeTheme.highlight}`}
+          style={{
+            '--orbit-room': 'clamp(0px, (100vw - 80rem) / 2 - 10px, var(--orbit-shift, 0px))',
+            right: 'calc(-1 * var(--orbit-room))'
+          }}
+          className={`pointer-events-none select-none absolute inset-y-0 left-0 -z-10 overflow-hidden xl:[--orbit-nudge:24px] xl:[--orbit-shift:24px] min-[1440px]:[--orbit-shift:80px] min-[1680px]:[--orbit-shift:120px] ${activeTheme.highlight}`}
         >
           {/* Fixed 720×520 stage (matches ORBIT_PATH coordinates), scaled down on smaller screens */}
-          <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[720px] h-[520px] origin-right scale-[0.55] sm:scale-75 lg:scale-100 opacity-70 md:opacity-100">
+          <div
+            style={{ right: 'calc(-1 * max(0px, var(--orbit-nudge, 0px) - var(--orbit-room)))' }}
+            className="absolute top-1/2 -translate-y-1/2 w-[720px] h-[520px] origin-right scale-[0.55] sm:scale-75 lg:scale-100 opacity-70 md:opacity-100"
+          >
             {renderOrbitArtwork('hero-orbit')}
           </div>
         </div>
@@ -1725,7 +1922,7 @@ export default function App({ page = 'home' }) {
           </div>
 
           {/* Editable Studio Headline */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08] mb-8">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08] mb-8 lg:text-balance">
             Websites & digital products built to last and grow.
           </h1>
 
@@ -1945,12 +2142,25 @@ export default function App({ page = 'home' }) {
       </div>
       )}
 
-      {/* PROJECT DEEP DIVE MODAL */}
-      {selectedProject && (
+      {/* PROJECT DEEP DIVE MODAL. Projects with `caseStudy` get the case-study layout; others keep scope, technical and stack sections. */}
+      {selectedProject && (() => {
+        const project = selectedProject;
+        const isCaseStudy = !!project.caseStudy;
+        // Light editorial section labels (the site's type, not bold mono)
+        const sectionLabel = `text-xs uppercase tracking-[0.12em] font-medium ${activeTheme.textMuted}`;
+        const tagList = (
+          <ul className="flex flex-wrap gap-2">
+            {project.tags.map((tag) => (
+              <li key={tag} className={`text-xs px-2.5 py-1 rounded border ${activeTheme.badge}`}>{tag}</li>
+            ))}
+          </ul>
+        );
+        return (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in motion-reduce:animate-none"
-          // Close on a backdrop click only when the press also started on the backdrop (not a drag out of the popup)
-          onMouseDown={(e) => { projectBackdropPressRef.current = e.target === e.currentTarget; }}
+          // Close on a backdrop click or tap only when the press also started on the backdrop
+          // (not a text selection or drag that began inside the popup)
+          onPointerDown={(e) => { projectBackdropPressRef.current = e.target === e.currentTarget; }}
           onClick={(e) => {
             if (projectBackdropPressRef.current && e.target === e.currentTarget) setSelectedProject(null);
           }}
@@ -1960,7 +2170,7 @@ export default function App({ page = 'home' }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="project-dialog-title"
-            className={`relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl border p-6 md:p-8 shadow-2xl ${activeTheme.bg} ${activeTheme.border} ${activeTheme.text}`}
+            className={`relative w-full max-w-3xl max-h-[90vh] overflow-y-auto overscroll-contain rounded-xl border p-6 md:p-8 shadow-2xl ${activeTheme.bg} ${activeTheme.border} ${activeTheme.text}`}
           >
             
             <button
@@ -1973,26 +2183,51 @@ export default function App({ page = 'home' }) {
             </button>
 
             <div className="mb-6 pr-12">
-              {selectedProject.eyebrow && (
-                <p className={`text-xs font-mono uppercase tracking-widest ${activeTheme.textMuted}`}>{selectedProject.eyebrow}</p>
+              {project.eyebrow && (
+                <p className={sectionLabel}>{project.eyebrow}</p>
               )}
-              <h2 id="project-dialog-title" className="text-2xl sm:text-3xl font-bold mt-2 mb-1">{selectedProject.title}</h2>
-              {selectedProject.status && (
-                <p className={`text-xs font-mono uppercase tracking-wider ${activeTheme.textMuted}`}>{selectedProject.status}</p>
+              <h2 ref={projectTitleRef} tabIndex={-1} id="project-dialog-title" className="text-2xl sm:text-3xl font-bold mt-2 mb-1 focus:outline-none">{project.title}</h2>
+              {project.status && (
+                <p className={sectionLabel}>{project.status}</p>
               )}
-              {selectedProject.client && <p className={`text-sm font-mono ${activeTheme.textMuted}`}>Client Partner: {selectedProject.client}</p>}
-              {(selectedProject.liveUrl || selectedProject.demoUrl) && (
-                <div className="mt-4 text-sm font-medium">{renderExternalProjectLink(selectedProject)}</div>
+              {project.client && <p className={`text-sm ${activeTheme.textMuted}`}>Client Partner: {project.client}</p>}
+              {/* Case studies show the live-site link with the footer actions instead */}
+              {!isCaseStudy && (project.liveUrl || project.demoUrl) && (
+                <div className="mt-4 text-sm font-medium">{renderExternalProjectLink(project)}</div>
               )}
             </div>
 
-            <div className="relative aspect-video rounded-lg overflow-hidden mb-6 border border-zinc-800">
-              <img src={selectedProject.image} alt={selectedProject.imageAlt} className="w-full h-full object-cover" />
-            </div>
+            {/* Images: desktop and phone screenshots when there's a phone capture, otherwise the desktop one alone,
+                shown at its own proportions */}
+            {project.mobileImage ? (
+              <ScreenshotPair
+                key={project.id}
+                desktop={project.image}
+                desktopAlt={project.imageAlt}
+                mobile={project.mobileImage}
+                mobileAlt={project.mobileImageAlt}
+                imageClass={`rounded-lg border ${activeTheme.border}`}
+              />
+            ) : (
+              <div className="rounded-lg overflow-hidden mb-6 border border-zinc-800">
+                <img src={project.image} alt={project.imageAlt} className="block w-full h-auto" />
+              </div>
+            )}
 
-            {Object.keys(selectedProject.stats).length > 0 && (
+            {project.quickFacts && (
+              <dl className={`grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 py-5 mb-8 border-y ${activeTheme.border}`}>
+                {project.quickFacts.map(([label, value]) => (
+                  <div key={label}>
+                    <dt className={sectionLabel}>{label}</dt>
+                    <dd className="mt-1 text-sm">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            {Object.keys(project.stats).length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {Object.entries(selectedProject.stats).map(([key, val]) => (
+              {Object.entries(project.stats).map(([key, val]) => (
                 <div key={key} className={`p-4 rounded border ${activeTheme.cardBg} ${activeTheme.border}`}>
                   <div className="text-xl font-bold font-mono">{val}</div>
                   <div className={`text-xs capitalize font-mono ${activeTheme.textMuted}`}>{key.replace(/([A-Z])/g, ' $1')}</div>
@@ -2001,13 +2236,45 @@ export default function App({ page = 'home' }) {
             </div>
             )}
 
-            <div className="space-y-6">
-              {selectedProject.details && (
+            <div className="space-y-8">
+              {isCaseStudy ? (<>
+                <div className="space-y-6">
+                  {project.caseStudy.map(([heading, text]) => (
+                    <div key={heading} className="sm:grid sm:grid-cols-[9rem_1fr] sm:gap-6">
+                      <h3 className={`${sectionLabel} sm:pt-1`}>{heading}</h3>
+                      <p className="mt-2 sm:mt-0 text-base leading-relaxed">{text}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {(project.builtWith || project.tags.length > 0) && (
+                <div>
+                  <h3 className={`${sectionLabel} mb-2`}>How it’s built</h3>
+                  {project.builtWith && <p className={`text-sm leading-relaxed mb-3 ${activeTheme.textMuted}`}>{project.builtWith}</p>}
+                  {project.tags.length > 0 && tagList}
+                </div>
+                )}
+
+                {/* Rendered only with a client-approved quote and attribution in the project data */}
+                {project.testimonial?.quote && (
+                  <figure className={`pl-5 border-l-2 ${activeTheme.border}`}>
+                    <blockquote className="text-lg leading-relaxed italic">
+                      <p>“{project.testimonial.quote}”</p>
+                    </blockquote>
+                    {project.testimonial.name && (
+                      <figcaption className={`mt-3 text-sm ${activeTheme.textMuted}`}>
+                        {project.testimonial.name}{project.testimonial.role && `, ${project.testimonial.role}`}
+                      </figcaption>
+                    )}
+                  </figure>
+                )}
+              </>) : (<>
+              {project.details && (
               <div>
-                <h3 className="text-sm font-mono uppercase tracking-wider mb-2 font-bold">{selectedProject.details.heading}</h3>
-                {selectedProject.details.items ? (
+                <h3 className={`${sectionLabel} mb-2`}>{project.details.heading}</h3>
+                {project.details.items ? (
                   <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {selectedProject.details.items.map((item) => (
+                    {project.details.items.map((item) => (
                       <li key={item} className="flex items-start gap-2 text-sm">
                         <CheckCircle2 size={16} aria-hidden="true" className="text-emerald-500 shrink-0 mt-0.5" />
                         <span>{item}</span>
@@ -2016,55 +2283,84 @@ export default function App({ page = 'home' }) {
                   </ul>
                 ) : (
                   <p className={`text-sm leading-relaxed ${activeTheme.textMuted}`}>
-                    {selectedProject.details.text}
+                    {project.details.text}
                   </p>
                 )}
               </div>
               )}
 
-              {selectedProject.technicalExecution && (
+              {project.technicalExecution && (
               <div>
-                <h3 className="text-sm font-mono uppercase tracking-wider mb-2 font-bold">Technical Execution</h3>
+                <h3 className={`${sectionLabel} mb-2`}>Technical Execution</h3>
                 <p className={`text-sm leading-relaxed ${activeTheme.textMuted}`}>
-                  {selectedProject.technicalExecution}
+                  {project.technicalExecution}
                 </p>
               </div>
               )}
 
               {/* Tech Stack: native <details>, so it opens with Enter/Space and announces its expanded state */}
-              {selectedProject.tags.length > 0 && (
+              {project.tags.length > 0 && (
               <details className={`group/stack rounded border ${activeTheme.border}`}>
-                <summary className={`flex items-center justify-between gap-2 px-4 py-3 rounded cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm font-mono uppercase tracking-wider font-bold ${FOCUS_RING}`}>
+                <summary className={`flex items-center justify-between gap-2 px-4 py-3 rounded cursor-pointer list-none [&::-webkit-details-marker]:hidden ${sectionLabel} ${FOCUS_RING}`}>
                   Tech Stack
                   <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open/stack:rotate-180 motion-reduce:transition-none" />
                 </summary>
-                <ul className="flex flex-wrap gap-2 px-4 pb-4">
-                  {selectedProject.tags.map((tag) => (
-                    <li key={tag} className={`text-xs font-mono px-2 py-1 rounded ${activeTheme.badge}`}>{tag}</li>
-                  ))}
-                </ul>
+                <div className="px-4 pb-4">{tagList}</div>
               </details>
               )}
+              </>)}
 
-              <div className="pt-6 border-t border-zinc-800/40 flex justify-end gap-3">
-                <button
-                  onClick={() => setSelectedProject(null)}
-                  className={`px-4 py-2 text-xs font-medium rounded border ${activeTheme.border} hover:bg-zinc-800/20`}
-                >
-                  Close
-                </button>
-                <a
-                  href={homeHref('#contact')}
-                  onClick={() => setSelectedProject(null)}
-                  className={`px-4 py-2 text-xs font-medium rounded ${activeTheme.accent}`}
-                >
-                  Request Similar Project
-                </a>
-              </div>
+              {/* Footer actions: in reading (and Tab) order; they wrap, and stack full-width on narrow screens */}
+              {(() => {
+                const closeButton = (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProject(null)}
+                    className={`sm:ml-auto px-4 py-2.5 text-sm font-medium rounded border text-center ${activeTheme.border} hover:bg-zinc-800/20 ${FOCUS_RING}`}
+                  >
+                    Close
+                  </button>
+                );
+                return (
+                  <div className={`pt-6 border-t ${activeTheme.border} flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3`}>
+                    {isCaseStudy ? (<>
+                      <a
+                        href={isHome ? '#contact' : `/?project=${project.id}#contact`}
+                        onClick={(e) => handleProjectEnquiry(e, project, { prefill: true })}
+                        className={`px-5 py-2.5 text-sm font-medium rounded text-center ${activeTheme.accent} ${FOCUS_RING}`}
+                      >
+                        Start a similar project
+                      </a>
+                      {project.liveUrl && (
+                        <a
+                          href={project.liveUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`px-4 py-2.5 text-sm font-medium rounded border text-center ${activeTheme.border} hover:bg-zinc-800/20 ${FOCUS_RING}`}
+                        >
+                          Visit live site<span aria-hidden="true"> ↗</span>
+                          <span className="sr-only">: {project.title} (opens in a new tab)</span>
+                        </a>
+                      )}
+                      {closeButton}
+                    </>) : (<>
+                      {closeButton}
+                      <a
+                        href={homeHref('#contact')}
+                        onClick={(e) => handleProjectEnquiry(e, project)}
+                        className={`px-4 py-2.5 text-sm font-medium rounded text-center ${activeTheme.accent} ${FOCUS_RING}`}
+                      >
+                        Request Similar Project
+                      </a>
+                    </>)}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {isHome && (<>
       {/* SECTION 2: SERVICES & SITE MAINTENANCE */}
@@ -2079,14 +2375,20 @@ export default function App({ page = 'home' }) {
           </p>
         </div>
 
-        {/* Studio Offerings: category tabs (Site Maintenance links to the plans below) */}
+        {/* Studio Offerings: category tabs (Site Maintenance links to the plans below).
+            Phones get one swipeable row, styled like the billing toggle, with the Site Maintenance link after the panels. */}
         <div ref={offeringsRef} id="offerings" className="mb-20 scroll-mt-20 md:scroll-mt-28 xl:scroll-mt-20">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6 sm:mb-10">
+            <div className={isPhone ? `min-w-0 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}` : 'sm:col-span-2 lg:col-span-4'}>
             <div
+              ref={offeringTabListRef}
               role="tablist"
               aria-label="Studio Offerings"
               onKeyDown={handleOfferingTabKeyDown}
-              className="sm:col-span-2 lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+              style={isPhone ? { maskImage: edgeFadeMask(offeringTabEdges), WebkitMaskImage: edgeFadeMask(offeringTabEdges) } : undefined}
+              className={isPhone
+                ? 'relative flex gap-1 p-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+                : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'}
             >
               {OFFERING_CATEGORIES.map((cat) => {
                 const selected = offeringTab === cat.id;
@@ -2102,36 +2404,26 @@ export default function App({ page = 'home' }) {
                     aria-labelledby={`offering-tab-${cat.id}-name`}
                     aria-describedby={`offering-tab-${cat.id}-desc`}
                     tabIndex={selected ? 0 : -1}
-                    onClick={() => setOfferingTab(cat.id)}
-                    className={`p-4 rounded-lg border text-left flex flex-col items-start transition-all ${FOCUS_RING} ${
-                      selected
-                        ? `ring-2 ring-indicator ${activeTheme.cardBg} ${activeTheme.border}`
-                        : `${activeTheme.border} hover:opacity-80`
-                    }`}
+                    onClick={() => selectOfferingTab(cat.id)}
+                    className={isPhone
+                      ? `shrink-0 whitespace-nowrap px-4 py-2 rounded text-xs font-medium transition-all ${FOCUS_RING} ${
+                        selected ? activeTheme.accent : `${activeTheme.textMuted} hover:opacity-80`
+                      }`
+                      : `p-4 rounded-lg border text-left flex flex-col items-start transition-all ${FOCUS_RING} ${
+                        selected
+                          ? `ring-2 ring-indicator ${activeTheme.cardBg} ${activeTheme.border}`
+                          : `${activeTheme.border} hover:opacity-80`
+                      }`}
                   >
-                    <cat.Icon size={18} aria-hidden="true" className={`mb-3 ${activeTheme.highlight}`} />
-                    <span id={`offering-tab-${cat.id}-name`} className="block text-sm font-bold">{cat.name}</span>
-                    <span id={`offering-tab-${cat.id}-desc`} className={`block text-xs mt-1 ${activeTheme.textMuted}`}>{cat.positioning}</span>
+                    {!isPhone && <cat.Icon size={18} aria-hidden="true" className={`mb-3 ${activeTheme.highlight}`} />}
+                    <span id={`offering-tab-${cat.id}-name`} className={isPhone ? 'block' : 'block text-sm font-bold'}>{cat.name}</span>
+                    <span id={`offering-tab-${cat.id}-desc`} className={isPhone ? 'hidden' : `block text-xs mt-1 ${activeTheme.textMuted}`}>{cat.positioning}</span>
                   </button>
                 );
               })}
             </div>
-            <a
-              href={`#${CARE_OFFERING.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                window.history.replaceState(null, '', `#${CARE_OFFERING.id}`);
-                showOffering(CARE_OFFERING.id, { focusTab: true });
-              }}
-              className={`p-4 rounded-lg border border-dashed text-left transition-all hover:opacity-80 ${FOCUS_RING} ${activeTheme.border}`}
-            >
-              <CARE_OFFERING.Icon size={18} aria-hidden="true" className={`mb-3 ${activeTheme.highlight}`} />
-              <span className="flex items-center gap-1 text-sm font-bold">
-                {CARE_OFFERING.name}
-                <ChevronDown size={14} aria-hidden="true" />
-              </span>
-              <span className={`block text-xs mt-1 ${activeTheme.textMuted}`}>{CARE_OFFERING.positioning}</span>
-            </a>
+            </div>
+            {!isPhone && renderCareOfferingLink()}
           </div>
 
           {/* Websites */}
@@ -2222,11 +2514,12 @@ export default function App({ page = 'home' }) {
     Ongoing care for custom-built websites, WordPress sites and websites built by Iris & Oak.
   </p>
 
-  {/* Billing period toggle (monthly care tiers only) */}
+  {/* Billing period toggle (monthly care tiers only); phones also pick one plan to show */}
+  <div className="flex flex-col items-start gap-3 mb-8">
   <div
     role="group"
     aria-label="Billing period"
-    className={`inline-flex p-1 mb-8 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}
+    className={`inline-flex p-1 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}
   >
     {[
       { key: 'monthly', label: 'Monthly' },
@@ -2245,13 +2538,35 @@ export default function App({ page = 'home' }) {
       </button>
     ))}
   </div>
+  <div
+    role="group"
+    aria-label="Care plan"
+    className={`sm:hidden inline-flex p-1 rounded-lg border ${activeTheme.border} ${activeTheme.cardBg}`}
+  >
+    {CARE_PLANS.filter((plan) => plan.type === 'monthly').map((plan) => (
+      <button
+        key={plan.id}
+        type="button"
+        aria-pressed={carePlanId === plan.id}
+        aria-controls={`care-plan-${plan.id}`}
+        onClick={() => setCarePlanId(plan.id)}
+        className={`px-4 py-2 rounded text-xs font-medium transition-all ${FOCUS_RING} ${
+          carePlanId === plan.id ? activeTheme.accent : `${activeTheme.textMuted} hover:opacity-80`
+        }`}
+      >
+        {plan.name}
+      </button>
+    ))}
+  </div>
+  </div>
 
   {/* Three monthly care tiers */}
   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
     {CARE_PLANS.filter((plan) => plan.type === 'monthly').map((plan) => (
       <div
         key={plan.id}
-        className={`relative p-6 sm:p-8 rounded-xl border flex flex-col justify-between transition-all ${
+        id={`care-plan-${plan.id}`}
+        className={`relative p-6 sm:p-8 rounded-xl border ${carePlanId === plan.id ? 'flex' : 'hidden sm:flex'} flex-col justify-between transition-all ${
           plan.popular
             ? `ring-2 ring-emerald-500/50 ${activeTheme.cardBg} ${activeTheme.border}`
             : `${activeTheme.cardBg} ${activeTheme.border}`
@@ -2464,9 +2779,9 @@ export default function App({ page = 'home' }) {
       <section id="contact" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto text-center mb-12">
           <div className={`text-xs uppercase font-mono tracking-widest mb-2 ${activeTheme.textMuted}`}>Enquire</div>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">Plan your project</h2>
+          <h2 ref={enquiryHeadingRef} tabIndex={-1} className="text-3xl sm:text-4xl font-bold tracking-tight mb-4 focus:outline-none">Plan your project</h2>
           <p className={`text-sm sm:text-base ${activeTheme.textMuted}`}>
-            Answer a few quick questions and I’ll come back with a clear plan and price, usually within two working days.
+            Tell me a little about your project, and I'll come back with a clear plan and price, within three working days.
           </p>
         </div>
 
@@ -2531,13 +2846,13 @@ export default function App({ page = 'home' }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { field: 'name', label: 'Name', type: 'text', autoComplete: 'name', required: true },
-                  { field: 'email', label: 'Email', type: 'email', autoComplete: 'email', required: true },
-                  { field: 'business', label: 'Business name or current website', type: 'text', autoComplete: 'organization', required: false, wide: true }
+                  { field: 'email', label: 'Email Address', required: true },
+                  { field: 'business', label: 'Business Name or Current Website', type: 'text', autoComplete: 'organization', required: false, wide: true }
                 ].map(({ field, label, type, autoComplete, required, wide }) => (
                   <div key={field} className={wide ? 'sm:col-span-2' : undefined}>
                     <label htmlFor={`enquiry-${field}`} className="block text-xs font-mono mb-1">
                       {label}
-                      {required ? <span aria-hidden="true"> *</span> : <span className={activeTheme.textMuted}> (optional)</span>}
+                      {required ? <span aria-hidden="true"> *</span> : <span className={activeTheme.textMuted}> (Optional)</span>}
                     </label>
                     <input
                       id={`enquiry-${field}`}
@@ -2560,9 +2875,9 @@ export default function App({ page = 'home' }) {
                 ))}
               </div>
 
-              {/* 4. What do you need help with? (checkbox chips: choose any) */}
+              {/* 4. What can I help with? (checkbox chips: choose any) */}
               <fieldset>
-                <legend className="text-xs font-mono mb-1">What do you need help with?</legend>
+                <legend className="text-xs font-mono mb-1">What can I help with?</legend>
                 <p id="enquiry-needs-hint" className={`text-xs mb-3 ${activeTheme.textMuted}`}>Choose all that apply.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {ENQUIRY_NEEDS.map((need) => {
@@ -2605,7 +2920,7 @@ export default function App({ page = 'home' }) {
                   rows={5}
                   value={enquiry.message}
                   onChange={(e) => updateEnquiry('message', e.target.value)}
-                  placeholder="What does your business do, and what would you like your site or tool to help with?"
+                  placeholder="What does your business do, and what would you like your website or tool to help with?"
                   className={`w-full p-2.5 rounded text-xs border ${activeTheme.border} ${activeTheme.bg}`}
                 />
               </div>
@@ -2615,7 +2930,7 @@ export default function App({ page = 'home' }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-y-0">
                 <div className="sm:grid sm:grid-rows-subgrid sm:row-span-3">
                   <label htmlFor="enquiry-launch" className="block self-end text-xs font-mono mb-1">
-                    When would you like to launch?<span className={activeTheme.textMuted}> (optional)</span>
+                    When would you like to launch?<span className={activeTheme.textMuted}> (Optional)</span>
                   </label>
                   <select
                     id="enquiry-launch"
@@ -2633,7 +2948,7 @@ export default function App({ page = 'home' }) {
 
                 <div className="sm:grid sm:grid-rows-subgrid sm:row-span-3">
                   <label htmlFor="enquiry-budget" className="block self-end text-xs font-mono mb-1">
-                    Do you have a budget in mind?<span className={activeTheme.textMuted}> (optional)</span>
+                    Do you have a budget in mind?<span className={activeTheme.textMuted}> (Optional)</span>
                   </label>
                   <select
                     id="enquiry-budget"

@@ -27,3 +27,6 @@ next-env.d.ts
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# browser test screenshots (tests/browser/README.md)
+/tests/browser/screenshots/

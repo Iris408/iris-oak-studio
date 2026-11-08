@@ -24,6 +24,12 @@ Start the development server:
 
     npm run build
 
+## Browser tests
+
+Builds the site and runs the headless Chrome suites (project popups and phone layout). Needs Node 22+ and Chrome; see `tests/browser/README.md`.
+
+    npm run test:browser
+
 ## Project structure
 
 - `src/app/` — main studio website
