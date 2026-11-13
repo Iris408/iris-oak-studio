@@ -244,7 +244,7 @@ const SAMPLE_PROJECTS = [
     id: 'maison-vale',
     title: 'Events by Maison Vale',
     category: 'client-websites',
-    status: 'In Progress',
+    status: 'Coming soon',
     liveUrl: 'https://eventsbymaisonvale.com',
     client: '',
     summary: 'An elegant, editorial website for an events company with almost 30 years of experience in weddings, corporate events and special occasions.',
